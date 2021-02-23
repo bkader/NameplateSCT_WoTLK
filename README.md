@@ -5,6 +5,6 @@ This adds the same style of SCT to your personal frame or anchored to your scree
 - Rename the folder to **NameplateSCT**.
 - Enjoy!
 
-Original addon can be found here: https://mods.curse.com/addons/wow/269544-nameplate-scrolling-combat-text
+Original addon can be found here: https://www.curseforge.com/wow/addons/nameplate-scrolling-combat-text
 
 Credits to original authors: **mpstark, Justwait**.
