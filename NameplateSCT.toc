@@ -1,0 +1,11 @@
+## Interface: 30300
+## Version: 1.8
+## Title: NameplateSCT (|c00ffffffWoTLK|r)
+## Author: mpstark, Justwait (Kader Backport)
+## SavedVariables: NameplateSCTDB
+## Notes: Nameplate-based scrolling combat text.
+## OptionalDeps: Ace3, LibEasing
+
+embeds.xml
+Locales\locale.xml
+NameplateSCT.lua

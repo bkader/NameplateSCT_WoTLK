@@ -1,0 +1,4 @@
+.luacheckrc
+Makefile
+*.zip
+luacheck.exe
