@@ -177,6 +177,8 @@ local ANIMATION_RAINFALL_Y_MAX = 100
 local ANIMATION_RAINFALL_Y_START_MIN = 5
 local ANIMATION_RAINFALL_Y_START_MAX = 15
 
+local AutoAttack = select(1, GetSpellInfo(6603))
+local AutoShot = select(1, GetSpellInfo(75))
 local DAMAGE_TYPE_COLORS = {
     [SCHOOL_MASK_PHYSICAL] = "FFFF00",
     [SCHOOL_MASK_HOLY] = "FFE680",
@@ -186,7 +188,8 @@ local DAMAGE_TYPE_COLORS = {
     [SCHOOL_MASK_FROST+SCHOOL_MASK_FIRE] = "FF80FF",
     [SCHOOL_MASK_SHADOW] = "8080FF",
     [SCHOOL_MASK_ARCANE] = "FF80FF",
-    [MELEE] = "FFFFFF",
+    [AutoAttack] = "FFFFFF",
+    [AutoShot] = "FFFFFF",
     ["pet"] = "CC8400"
 }
 
@@ -534,12 +537,12 @@ function NameplateSCT:COMBAT_LOG_EVENT_UNFILTERED(_, _, clueevent, srcGUID, srcN
             self:DamageEvent(dstGUID, dstName, spellName, amount, school, critical, spellId)
 		elseif clueevent == "SWING_DAMAGE" then
 			local amount, _, _, _, _, _, critical, _, _ = ...
-            self:DamageEvent(dstGUID, dstName, MELEE, amount, 1, critical, 6603)
+            self:DamageEvent(dstGUID, dstName, AutoAttack, amount, 1, critical, 6603)
         elseif missedSpellEvents[clueevent] then
 			local spellId, spellName, school, missType = ...
             self:MissEvent(dstGUID, dstName, spellName, missType, spellId)
         elseif clueevent == "SWING_MISSED" then
-			self:MissEvent(dstGUID, dstName, MELEE, dstGUID == playerGUID and MELEE or ..., 6603)
+			self:MissEvent(dstGUID, dstName, AutoAttack, dstGUID == playerGUID and AutoAttack or ..., 6603)
         end
     elseif (bit.band(srcFlags, COMBATLOG_OBJECT_TYPE_GUARDIAN) > 0 or bit.band(srcFlags, COMBATLOG_OBJECT_TYPE_PET) > 0) and bit.band(srcFlags, COMBATLOG_OBJECT_AFFILIATION_MINE) > 0 then -- Pet/Guardian events
         if dstGUID == playerGUID and NameplateSCT.db.global.personal then
@@ -548,7 +551,7 @@ function NameplateSCT:COMBAT_LOG_EVENT_UNFILTERED(_, _, clueevent, srcGUID, srcN
 	            self:DamageEvent(dstGUID, dstName, spellName, amount, "pet", critical, spellId)
 			elseif clueevent == "SWING_DAMAGE" then
 				local amount, _, _, _, _, _, critical, _, _ = ...
-	            self:DamageEvent(dstGUID, dstName, MELEE, amount, "pet", critical, 6603)
+	            self:DamageEvent(dstGUID, dstName, AutoAttack, amount, "pet", critical, 6603)
 	        end
         end
     end
@@ -569,7 +572,7 @@ local lastDamageEventTime
 local runningAverageDamageEvents = 0
 function NameplateSCT:DamageEvent(guid, name, spellName, amount, school, crit, spellId)
     local text, animation, pow, size, alpha
-    local autoattack = spellName == MELEE or spellName == "pet"
+    local autoattack = spellName == AutoAttack or spellName == AutoShot or spellName == "pet"
 
     -- select an animation
     if (autoattack and crit) then
@@ -629,17 +632,17 @@ function NameplateSCT:DamageEvent(guid, name, spellName, amount, school, crit, s
 
     -- color text
     if guid ~= playerGUID then
-        if self.db.global.damageColor and school and DAMAGE_TYPE_COLORS[school] then
-            text = "\124Cff" .. DAMAGE_TYPE_COLORS[school] .. text .. "\124r"
-        elseif self.db.global.damageColor and spellName == MELEE and DAMAGE_TYPE_COLORS[spellName] then
+        if self.db.global.damageColor and (spellName == AutoAttack or spellName == AutoShot) and DAMAGE_TYPE_COLORS[spellName] then
             text = "\124Cff" .. DAMAGE_TYPE_COLORS[spellName] .. text .. "\124r"
+        elseif self.db.global.damageColor and school and DAMAGE_TYPE_COLORS[school] then
+            text = "\124Cff" .. DAMAGE_TYPE_COLORS[school] .. text .. "\124r"
         else
             text = "\124Cff" .. self.db.global.defaultColor .. text .. "\124r"
         end
     else
         if self.db.global.damageColorPersonal and school and DAMAGE_TYPE_COLORS[school] then
             text = "\124Cff" .. DAMAGE_TYPE_COLORS[school] .. text .. "\124r"
-        elseif self.db.global.damageColorPersonal and spellName == MELEE and DAMAGE_TYPE_COLORS[spellName] then
+        elseif self.db.global.damageColorPersonal and spellName == AutoAttack and DAMAGE_TYPE_COLORS[spellName] then
             text = "\124Cff" .. DAMAGE_TYPE_COLORS[spellName] .. text .. "\124r"
         else
             text = "\124Cff" .. self.db.global.defaultColorPersonal .. text .. "\124r"
