@@ -723,7 +723,7 @@ function NameplateSCT:MissEvent(guid, name, spellName, missType, spellId)
 
     pow = true
 
-    text = MISS_EVENT_STRINGS[missType] or "Missed"
+    text = MISS_EVENT_STRINGS[missType] or ACTION_SPELL_MISSED_MISS
     text = "\124Cff" .. color .. text .. "\124r"
 
     self:DisplayText(guid, name, text, size, alpha, animation, spellId, pow, spellName)
