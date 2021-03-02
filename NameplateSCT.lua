@@ -280,7 +280,6 @@ local function recycleFontString(fontString)
     fontString.animatingStartTime = nil
     fontString.anchorFrame = nil
 
-    fontString.unit = nil
     fontString.guid = nil
 
     fontString.pow = nil
@@ -297,7 +296,6 @@ local function recycleFontString(fontString)
         end
 
         fontString.icon.anchorFrame = nil
-        fontString.icon.unit = nil
         fontString.icon.guid = nil
     end
 
@@ -403,10 +401,10 @@ local function AnimationOnUpdate()
                 recycleFontString(fontString)
             else
                 local isTarget = false
-                if fontString.unit then
-                    isTarget = UnitIsUnit(fontString.unit, "target")
+                if fontString.guid then
+					isTarget = (UnitGUID("target") == fontString.guid)
                 else
-                    fontString.unit = "player"
+                    fontString.guid = playerGUID
                 end
 
                 local frame = fontString:GetParent()
@@ -417,7 +415,7 @@ local function AnimationOnUpdate()
                 end
 
                 local startAlpha = NameplateSCT.db.global.formatting.alpha
-                if NameplateSCT.db.global.useOffTarget and not isTarget and fontString.unit ~= "player" then
+                if NameplateSCT.db.global.useOffTarget and not isTarget and fontString.guid ~= playerGUID then
                     startAlpha = NameplateSCT.db.global.offTargetFormatting.alpha
                 end
 
@@ -458,8 +456,8 @@ local function AnimationOnUpdate()
                     yOffset = yOffset + fontString.rainfallStartY
                 end
 
-                if not UnitIsDead(fontString.unit) and fontString.anchorFrame and fontString.anchorFrame:IsShown() then
-                    if fontString.unit == "player" then -- player frame
+                if fontString.anchorFrame and fontString.anchorFrame:IsShown() then
+                    if fontString.guid == playerGUID then -- player frame
                         fontString:SetPoint("CENTER", fontString.anchorFrame, "CENTER", NameplateSCT.db.global.xOffsetPersonal + xOffset, NameplateSCT.db.global.yOffsetPersonal + yOffset)
                     else
                         fontString:SetPoint("CENTER", fontString.anchorFrame, "CENTER", NameplateSCT.db.global.xOffset + xOffset, NameplateSCT.db.global.yOffset + yOffset)
@@ -534,10 +532,10 @@ function NameplateSCT:COMBAT_LOG_EVENT_UNFILTERED(_, _, clueevent, srcGUID, srcN
     if playerGUID == srcGUID or (NameplateSCT.db.global.personal and playerGUID == dstGUID) then -- Player events
 		if damageSpellEvents[clueevent] then
 			local spellId, spellName, school, amount, _, _, _, _, _, critical, _, _ = ...
-            self:DamageEvent(dstGUID, dstName, spellName, amount, school, critical, spellId)
+            self:DamageEvent(dstGUID, spellName, amount, school, critical, spellId)
 		elseif clueevent == "SWING_DAMAGE" then
 			local amount, _, _, _, _, _, critical, _, _ = ...
-            self:DamageEvent(dstGUID, dstName, AutoAttack, amount, 1, critical, 6603)
+            self:DamageEvent(dstGUID, AutoAttack, amount, 1, critical, 6603)
         elseif missedSpellEvents[clueevent] then
 			local spellId, spellName, school, missType = ...
             self:MissEvent(dstGUID, dstName, spellName, missType, spellId)
@@ -548,10 +546,10 @@ function NameplateSCT:COMBAT_LOG_EVENT_UNFILTERED(_, _, clueevent, srcGUID, srcN
         if dstGUID == playerGUID and NameplateSCT.db.global.personal then
 			if damageSpellEvents[clueevent] then
 				local spellId, spellName, _, amount, _, _, _, _, _, critical, _, _ = ...
-	            self:DamageEvent(dstGUID, dstName, spellName, amount, "pet", critical, spellId)
+	            self:DamageEvent(dstGUID, spellName, amount, "pet", critical, spellId)
 			elseif clueevent == "SWING_DAMAGE" then
 				local amount, _, _, _, _, _, critical, _, _ = ...
-	            self:DamageEvent(dstGUID, dstName, AutoAttack, amount, "pet", critical, 6603)
+	            self:DamageEvent(dstGUID, AutoAttack, amount, "pet", critical, 6603)
 	        end
         end
     end
@@ -561,7 +559,6 @@ end
 -- DISPLAY --
 -------------
 local function commaSeperate(number)
-    -- https://stackoverflow.com/questions/10989788/lua-format-integer
     local _, _, minus, int, fraction = tostring(number):find("([-]?)(%d+)([.]?%d*)")
     int = int:reverse():gsub("(%d%d%d)", "%1,")
     return minus .. int:reverse():gsub("^,", "") .. fraction
@@ -570,7 +567,7 @@ end
 local numDamageEvents = 0
 local lastDamageEventTime
 local runningAverageDamageEvents = 0
-function NameplateSCT:DamageEvent(guid, name, spellName, amount, school, crit, spellId)
+function NameplateSCT:DamageEvent(guid, spellName, amount, school, crit, spellId)
     local text, animation, pow, size, alpha
     local autoattack = spellName == AutoAttack or spellName == AutoShot or spellName == "pet"
 
@@ -596,8 +593,7 @@ function NameplateSCT:DamageEvent(guid, name, spellName, amount, school, crit, s
         return
     end
 
-    local unit = name
-    local isTarget = unit and UnitIsUnit(unit, "target")
+    local isTarget = (UnitGUID("target") == guid)
 
     if (self.db.global.useOffTarget and not isTarget and playerGUID ~= guid) then
         size = self.db.global.offTargetFormatting.size
@@ -687,13 +683,12 @@ function NameplateSCT:DamageEvent(guid, name, spellName, amount, school, crit, s
     if (size < 5) then
         size = 5
     end
-    self:DisplayText(guid, name, text, size, alpha, animation, spellId, pow, spellName)
+    self:DisplayText(guid, text, size, alpha, animation, spellId, pow, spellName)
 end
 
-function NameplateSCT:MissEvent(guid, name, spellName, missType, spellId)
+function NameplateSCT:MissEvent(guid, spellName, missType, spellId)
     local text, animation, pow, size, alpha, color
-    local unit = name
-    local isTarget = unit and UnitIsUnit(unit, "target")
+    local isTarget = (UnitGUID("target") == guid)
 
     if playerGUID ~= guid then
         animation = self.db.global.animations.miss
@@ -726,21 +721,21 @@ function NameplateSCT:MissEvent(guid, name, spellName, missType, spellId)
     text = MISS_EVENT_STRINGS[missType] or ACTION_SPELL_MISSED_MISS
     text = "\124Cff" .. color .. text .. "\124r"
 
-    self:DisplayText(guid, name, text, size, alpha, animation, spellId, pow, spellName)
+    self:DisplayText(guid, text, size, alpha, animation, spellId, pow, spellName)
 end
 
-function NameplateSCT:DisplayText(guid, name, text, size, alpha, animation, spellId, pow, spellName)
+function NameplateSCT:DisplayText(guid, text, size, alpha, animation, spellId, pow, spellName)
     local fontString
     local icon
-    local unit = name
-    local nameplate = LibNameplate:GetNameplateByGUID(guid)
+	local nameplate
 
-    -- if there isn't an anchor frame, make sure that there is a guidNameplatePosition cache entry
-    if playerGUID == guid and not unit then
-        nameplate = "player"
-    elseif (not nameplate) then
-        return
-    end
+	if playerGUID == guid then
+		nameplate = "player"
+	else
+		nameplate = LibNameplate:GetNameplateByGUID(guid)
+	end
+
+	if not nameplate then return end
 
     fontString = getFontString()
 
@@ -765,7 +760,6 @@ function NameplateSCT:DisplayText(guid, name, text, size, alpha, animation, spel
         fontString.startHeight = 5
     end
 
-    fontString.unit = unit
     fontString.guid = guid
 
     local texture = select(3, GetSpellInfo(spellId or spellName))
