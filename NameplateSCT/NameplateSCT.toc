@@ -6,6 +6,6 @@
 ## Notes: Nameplate-based scrolling combat text.
 ## OptionalDeps: Ace3, LibEasing
 
-embeds.xml
-Locales\locale.xml
+Libs\Libs.xml
+Locales\Locale.xml
 NameplateSCT.lua
