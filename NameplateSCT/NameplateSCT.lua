@@ -344,7 +344,10 @@ function NameplateSCT:OnInitialize()
 		self:Disable()
 	end
 
-	self.ElvUI = _G.ElvUI and select(1, unpack(ElvUI))
+	if _G.ElvUI then
+		local e = select(1, unpack(_G.ElvUI))
+		self.ElvPlates = e:GetModule("NamePlates", true)
+	end
 end
 
 function NameplateSCT:OnEnable()
@@ -640,19 +643,19 @@ function NameplateSCT:DamageEvent(guid, spellName, amount, school, crit, spellId
 			self.db.global.damageColor and (spellName == AutoAttack or spellName == AutoShot) and
 				DAMAGE_TYPE_COLORS[spellName]
 		 then
-			text = "\124Cff" .. DAMAGE_TYPE_COLORS[spellName] .. text .. "\124r"
+			text = "\124cff" .. DAMAGE_TYPE_COLORS[spellName] .. text .. "\124r"
 		elseif self.db.global.damageColor and school and DAMAGE_TYPE_COLORS[school] then
-			text = "\124Cff" .. DAMAGE_TYPE_COLORS[school] .. text .. "\124r"
+			text = "\124cff" .. DAMAGE_TYPE_COLORS[school] .. text .. "\124r"
 		else
-			text = "\124Cff" .. self.db.global.defaultColor .. text .. "\124r"
+			text = "\124cff" .. self.db.global.defaultColor .. text .. "\124r"
 		end
 	else
 		if self.db.global.damageColorPersonal and school and DAMAGE_TYPE_COLORS[school] then
-			text = "\124Cff" .. DAMAGE_TYPE_COLORS[school] .. text .. "\124r"
+			text = "\124cff" .. DAMAGE_TYPE_COLORS[school] .. text .. "\124r"
 		elseif self.db.global.damageColorPersonal and spellName == AutoAttack and DAMAGE_TYPE_COLORS[spellName] then
-			text = "\124Cff" .. DAMAGE_TYPE_COLORS[spellName] .. text .. "\124r"
+			text = "\124cff" .. DAMAGE_TYPE_COLORS[spellName] .. text .. "\124r"
 		else
-			text = "\124Cff" .. self.db.global.defaultColorPersonal .. text .. "\124r"
+			text = "\124cff" .. self.db.global.defaultColorPersonal .. text .. "\124r"
 		end
 	end
 
@@ -727,17 +730,14 @@ function NameplateSCT:MissEvent(guid, spellName, missType, spellId)
 	pow = true
 
 	text = MISS_EVENT_STRINGS[missType] or ACTION_SPELL_MISSED_MISS
-	text = "\124Cff" .. color .. text .. "\124r"
+	text = "\124cff" .. color .. text .. "\124r"
 
 	self:DisplayText(guid, text, size, alpha, animation, spellId, pow, spellName)
 end
 
 function NameplateSCT:GetNameplateByGUID(guid)
-	if self.ElvUI then
-		local NP = self.ElvUI:GetModule("NamePlates", true)
-		if NP then
-			return NP:SearchNameplateByGUID(guid)
-		end
+	if self.ElvPlates then
+		return self.ElvPlates:SearchNameplateByGUID(guid)
 	end
 
 	return LibNameplate:GetNameplateByGUID(guid)
