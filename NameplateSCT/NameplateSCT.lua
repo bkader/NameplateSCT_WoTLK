@@ -456,15 +456,7 @@ local function AnimationOnUpdate()
 				elseif fontString.animation == "verticalDown" then
 					xOffset, yOffset = verticalPath(elapsed, fontString.animatingDuration, -fontString.distance)
 				elseif fontString.animation == "fountain" then
-					xOffset, yOffset =
-						arcPath(
-						elapsed,
-						fontString.animatingDuration,
-						fontString.arcXDist,
-						0,
-						fontString.arcTop,
-						fontString.arcBottom
-					)
+					xOffset, yOffset = arcPath(elapsed, fontString.animatingDuration, fontString.arcXDist, 0, fontString.arcTop, fontString.arcBottom)
 				elseif fontString.animation == "rainfall" then
 					_, yOffset = verticalPath(elapsed, fontString.animatingDuration, -fontString.distance)
 					xOffset = fontString.rainfallX
@@ -473,21 +465,9 @@ local function AnimationOnUpdate()
 
 				if fontString.anchorFrame and fontString.anchorFrame:IsShown() then
 					if fontString.guid == playerGUID then -- player frame
-						fontString:SetPoint(
-							"CENTER",
-							fontString.anchorFrame,
-							"CENTER",
-							NameplateSCT.db.global.xOffsetPersonal + xOffset,
-							NameplateSCT.db.global.yOffsetPersonal + yOffset
-						)
+						fontString:SetPoint("CENTER", fontString.anchorFrame, "CENTER", NameplateSCT.db.global.xOffsetPersonal + xOffset, NameplateSCT.db.global.yOffsetPersonal + yOffset)
 					else
-						fontString:SetPoint(
-							"CENTER",
-							fontString.anchorFrame,
-							"CENTER",
-							NameplateSCT.db.global.xOffset + xOffset,
-							NameplateSCT.db.global.yOffset + yOffset
-						)
+						fontString:SetPoint("CENTER", fontString.anchorFrame, "CENTER", NameplateSCT.db.global.xOffset + xOffset, NameplateSCT.db.global.yOffset + yOffset)
 					end
 				else
 					recycleFontString(fontString)
@@ -603,12 +583,10 @@ function NameplateSCT:DamageEvent(guid, spellName, amount, school, crit, spellId
 
 	-- select an animation
 	if (autoattack and crit) then
-		animation =
-			guid ~= playerGUID and self.db.global.animations.autoattackcrit or self.db.global.animationsPersonal.crit
+		animation = guid ~= playerGUID and self.db.global.animations.autoattackcrit or self.db.global.animationsPersonal.crit
 		pow = true
 	elseif (autoattack) then
-		animation =
-			guid ~= playerGUID and self.db.global.animations.autoattack or self.db.global.animationsPersonal.normal
+		animation = guid ~= playerGUID and self.db.global.animations.autoattack or self.db.global.animationsPersonal.normal
 		pow = false
 	elseif (crit) then
 		animation = guid ~= playerGUID and self.db.global.animations.crit or self.db.global.animationsPersonal.crit
@@ -689,10 +667,7 @@ function NameplateSCT:DamageEvent(guid, spellName, amount, school, crit, spellId
 		numDamageEvents = numDamageEvents + 1
 		lastDamageEventTime = GetTime()
 
-		if
-			((not crit and amount < SMALL_HIT_MULTIPIER * runningAverageDamageEvents) or
-				(crit and amount / 2 < SMALL_HIT_MULTIPIER * runningAverageDamageEvents))
-		 then
+		if ((not crit and amount < SMALL_HIT_MULTIPIER * runningAverageDamageEvents) or (crit and amount / 2 < SMALL_HIT_MULTIPIER * runningAverageDamageEvents)) then
 			if (self.db.global.sizing.smallHitsHide) then
 				-- skip this damage event, it's too small
 				return
@@ -789,11 +764,7 @@ function NameplateSCT:DisplayText(guid, text, size, alpha, animation, spellId, p
 	fontString:SetText(fontString.NSCTText)
 
 	fontString.NSCTFontSize = size
-	fontString:SetFont(
-		getFontPath(NameplateSCT.db.global.font),
-		fontString.NSCTFontSize,
-		NameplateSCT.db.global.fontFlag
-	)
+	fontString:SetFont(getFontPath(NameplateSCT.db.global.font), fontString.NSCTFontSize, NameplateSCT.db.global.fontFlag)
 	if NameplateSCT.db.global.textShadow then
 		fontString:SetShadowOffset(1, -1)
 	else
