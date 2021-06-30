@@ -8,7 +8,7 @@ NameplateSCT.frame = CreateFrame("Frame", nil, UIParent)
 local L = LibStub("AceLocale-3.0"):GetLocale("NameplateSCT")
 local LibEasing = LibStub("LibEasing-1.0")
 local SharedMedia = LibStub("LibSharedMedia-3.0")
-local LibNameplate = LibStub("LibNameplate-1.0")
+local LibNameplates = LibStub("LibNameplates-1.0")
 
 -------------
 -- GLOBALS --
@@ -342,11 +342,6 @@ function NameplateSCT:OnInitialize()
 	self:RegisterMenu()
 	if self.db.global.enabled == false then
 		self:Disable()
-	end
-
-	if _G.ElvUI then
-		local e = select(1, unpack(_G.ElvUI))
-		self.ElvPlates = e:GetModule("NamePlates", true)
 	end
 end
 
@@ -736,11 +731,7 @@ function NameplateSCT:MissEvent(guid, spellName, missType, spellId)
 end
 
 function NameplateSCT:GetNameplateByGUID(guid)
-	if self.ElvPlates then
-		return self.ElvPlates:SearchNameplateByGUID(guid)
-	end
-
-	return LibNameplate:GetNameplateByGUID(guid)
+	return LibNameplates:GetNameplateByGUID(guid)
 end
 
 function NameplateSCT:DisplayText(guid, text, size, alpha, animation, spellId, pow, spellName)

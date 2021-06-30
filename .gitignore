@@ -1,6 +1,5 @@
 _dev
-.luacheckrc
 Makefile
 *.zip
-luacheck.exe
-NameplateSCT - Copy.lua
+*.sublime-project
+*.sublime-workspace
