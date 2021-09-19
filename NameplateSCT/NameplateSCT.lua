@@ -529,7 +529,7 @@ local missedSpellEvents = {
 	SPELL_BUILDING_MISSED = true
 }
 
-local BITMASK_PETS = bit.bor(COMBATLOG_OBJECT_AFFILIATION_MINE, COMBATLOG_OBJECT_TYPE_PET, COMBATLOG_OBJECT_TYPE_GUARDIAN)
+local BITMASK_PETS = COMBATLOG_OBJECT_TYPE_PET + COMBATLOG_OBJECT_TYPE_GUARDIAN
 function NameplateSCT:COMBAT_LOG_EVENT_UNFILTERED(_, _, clueevent, srcGUID, srcName, srcFlags, dstGUID, dstName, _, ...)
 	if NameplateSCT.db.global.personalOnly and NameplateSCT.db.global.personal and playerGUID ~= dstGUID then
 		return
@@ -548,7 +548,7 @@ function NameplateSCT:COMBAT_LOG_EVENT_UNFILTERED(_, _, clueevent, srcGUID, srcN
 		elseif clueevent == "SWING_MISSED" then
 			self:MissEvent(dstGUID, AutoAttack, dstGUID == playerGUID and AutoAttack or ..., 6603)
 		end
-	elseif bit.band(srcFlags, BITMASK_PETS) ~= 0 then -- Pet/Guardian events
+	elseif bit.band(srcFlags, BITMASK_PETS) > 0 and bit.band(srcFlags, COMBATLOG_OBJECT_AFFILIATION_MINE) > 0 then -- Pet/Guardian events
 		if dstGUID ~= playerGUID and NameplateSCT.db.global.personal then
 			if damageSpellEvents[clueevent] then
 				local spellId, spellName, _, amount, _, _, _, _, _, critical, _, _ = ...
