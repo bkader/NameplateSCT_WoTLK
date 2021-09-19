@@ -1,10 +1,17 @@
 ## Interface: 30300
-## Version: 1.8
 ## Title: NameplateSCT (|c00ffffffWoTLK|r)
-## Author: mpstark, Justwait (Kader Backport)
-## SavedVariables: NameplateSCTDB
 ## Notes: Nameplate-based scrolling combat text.
+## Version: 1.8
 ## OptionalDeps: Ace3, LibEasing
+## SavedVariables: NameplateSCTDB
+## Author: Kader (|cff808080bkader#6361|r)
+## X-Date: 2021-09-19 @ 01:02 AM |cff808080UTC|r
+## X-Credits: mpstark, Justwait
+## X-Category: Combat
+## X-Email: bkader@mail.com
+## X-Website: https://github.com/bkader/NameplateSCT_WoTLK
+## X-Discord: https://discord.gg/a8z5CyS3eW
+## X-Donate: |cff0079c1PayPal|r or |cff246a96Paysera|r at |cff20ff20bkader@mail.com|r
 
 Libs\Libs.xml
 Locales\Locale.xml

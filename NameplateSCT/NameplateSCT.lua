@@ -529,6 +529,7 @@ local missedSpellEvents = {
 	SPELL_BUILDING_MISSED = true
 }
 
+local BITMASK_PETS = bit.bor(COMBATLOG_OBJECT_AFFILIATION_MINE, COMBATLOG_OBJECT_TYPE_PET, COMBATLOG_OBJECT_TYPE_GUARDIAN)
 function NameplateSCT:COMBAT_LOG_EVENT_UNFILTERED(_, _, clueevent, srcGUID, srcName, srcFlags, dstGUID, dstName, _, ...)
 	if NameplateSCT.db.global.personalOnly and NameplateSCT.db.global.personal and playerGUID ~= dstGUID then
 		return
@@ -547,11 +548,8 @@ function NameplateSCT:COMBAT_LOG_EVENT_UNFILTERED(_, _, clueevent, srcGUID, srcN
 		elseif clueevent == "SWING_MISSED" then
 			self:MissEvent(dstGUID, dstName, AutoAttack, dstGUID == playerGUID and AutoAttack or ..., 6603)
 		end
-	elseif
-		(bit.band(srcFlags, COMBATLOG_OBJECT_TYPE_GUARDIAN) > 0 or bit.band(srcFlags, COMBATLOG_OBJECT_TYPE_PET) > 0) and
-			bit.band(srcFlags, COMBATLOG_OBJECT_AFFILIATION_MINE) > 0
-	 then -- Pet/Guardian events
-		if dstGUID == playerGUID and NameplateSCT.db.global.personal then
+	elseif bit.band(srcFlags, BITMASK_PETS) ~= 0 then -- Pet/Guardian events
+		if dstGUID ~= playerGUID and NameplateSCT.db.global.personal then
 			if damageSpellEvents[clueevent] then
 				local spellId, spellName, _, amount, _, _, _, _, _, critical, _, _ = ...
 				self:DamageEvent(dstGUID, spellName, amount, "pet", critical, spellId)
@@ -806,11 +804,6 @@ local menu = {
 	handler = NameplateSCT,
 	type = "group",
 	args = {
-		discord = {
-			type = "header",
-			name = "Discord Server : \124c007289d9https://discord.gg/a8z5CyS3eW\124r",
-			order = 1
-		},
 		nameplatesEnabled = {
 			type = "description",
 			name = "\124cFFFF0000" .. L["YOUR ENEMY NAMEPLATES ARE DISABLED, NAMEPLATESCT WILL NOT WORK!!"] .. "\124r",
@@ -1600,6 +1593,44 @@ local menu = {
 						NameplateSCT.db.global.sizing.smallHitsHide = newValue
 					end,
 					order = 22
+				}
+			}
+		},
+		about = {
+			type = "group",
+			name = "About",
+			order = 110,
+			inline = true,
+			args = {
+				website = {
+					type = "description",
+					name = format("|cffffff33Website|r: %s", GetAddOnMetadata("NameplateSCT", "X-Website")),
+					width = "double",
+					order = 10
+				},
+				discord = {
+					type = "description",
+					name = format("|cffffff33Discord|r: %s", GetAddOnMetadata("NameplateSCT", "X-Discord")),
+					width = "double",
+					order = 20
+				},
+				email = {
+					type = "description",
+					name = format("|cffffff33Email|r: %s", GetAddOnMetadata("NameplateSCT", "X-Email")),
+					width = "double",
+					order = 30
+				},
+				donate = {
+					type = "description",
+					name = format("|cffffff33Donation|r: %s", GetAddOnMetadata("NameplateSCT", "X-Donate")),
+					width = "double",
+					order = 40
+				},
+				credits = {
+					type = "description",
+					name = format("|cffffff33Credits|r: %s", GetAddOnMetadata("NameplateSCT", "X-Credits")),
+					width = "double",
+					order = 50
 				}
 			}
 		}
