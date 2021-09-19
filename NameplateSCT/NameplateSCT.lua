@@ -544,9 +544,9 @@ function NameplateSCT:COMBAT_LOG_EVENT_UNFILTERED(_, _, clueevent, srcGUID, srcN
 			self:DamageEvent(dstGUID, AutoAttack, amount, 1, critical, 6603)
 		elseif missedSpellEvents[clueevent] then
 			local spellId, spellName, school, missType = ...
-			self:MissEvent(dstGUID, dstName, spellName, missType, spellId)
+			self:MissEvent(dstGUID, spellName, missType, spellId)
 		elseif clueevent == "SWING_MISSED" then
-			self:MissEvent(dstGUID, dstName, AutoAttack, dstGUID == playerGUID and AutoAttack or ..., 6603)
+			self:MissEvent(dstGUID, AutoAttack, dstGUID == playerGUID and AutoAttack or ..., 6603)
 		end
 	elseif bit.band(srcFlags, BITMASK_PETS) ~= 0 then -- Pet/Guardian events
 		if dstGUID ~= playerGUID and NameplateSCT.db.global.personal then
