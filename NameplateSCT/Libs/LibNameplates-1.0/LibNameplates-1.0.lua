@@ -647,14 +647,9 @@ function lib:HookNameplate(frame)
 	end
 
 	local healthBar = self.health_bar[frame]
-	if healthBar and not self.healthOnValueChangedHooks[frame] then
-		if frame.kuiParent then
-			frame.kuiParent:HookScript("OnValueChanged", ourHealthOnValueChanged)
-			self.healthOnValueChangedHooks[frame] = true
-		elseif healthBar:GetScript("OnValueChanged") then
-			self.healthOnValueChangedHooks[frame] = true
-			healthBar:HookScript("OnValueChanged", ourHealthOnValueChanged)
-		end
+	if healthBar and not self.healthOnValueChangedHooks[frame] and healthBar:HasScript("OnValueChanged") then
+		self.healthOnValueChangedHooks[frame] = true
+		healthBar:HookScript("OnValueChanged", ourHealthOnValueChanged)
 	end
 end
 
