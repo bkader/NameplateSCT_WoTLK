@@ -6,7 +6,7 @@ SVN:  svn://svn.wowace.com/wow/libnameplate-1-0/mainline/trunk
 Description: Alerts addons when a nameplate is shown or hidden. Has API to get info such as name, level, class, ect from the nameplate. LibNameplates tries to function with the default nameplates, Aloft, caelNamePlates and TidyPlates (buggy).
 Dependencies: LibStub, CallbackHandler-1.0
 ]]
-local MAJOR, MINOR = "LibNameplates-1.0", 21
+local MAJOR, MINOR = "LibNameplates-1.0", 22
 if not LibStub then
 	error(MAJOR .. " requires LibStub.")
 	return
@@ -612,7 +612,7 @@ function lib.healthOnValueChanged(frame, ...) --
 -- This fires before OnShow fires and the regions haven't been updated yet. 		--
 -- So I make sure lib.isOnScreen[plate] is true before working on the HP change.	--
 --------------------------------------------------------------------------------------
-	local plate = frame:GetParent()
+	local plate = frame.kuiParent or frame:GetParent()
 	local currentHP = ...
 
 	--strange, when a nameplate's not on screen, we still get HP changes. It's not relyable but might be of use somehow...
@@ -647,9 +647,14 @@ function lib:HookNameplate(frame)
 	end
 
 	local healthBar = self.health_bar[frame]
-	if healthBar and not self.healthOnValueChangedHooks[frame] and healthBar:GetScript("OnValueChanged") then
-		self.healthOnValueChangedHooks[frame] = true
-		healthBar:HookScript("OnValueChanged", ourHealthOnValueChanged)
+	if healthBar and not self.healthOnValueChangedHooks[frame] then
+		if frame.kuiParent then
+			frame.kuiParent:HookScript("OnValueChanged", ourHealthOnValueChanged)
+			self.healthOnValueChangedHooks[frame] = true
+		elseif healthBar:GetScript("OnValueChanged") then
+			self.healthOnValueChangedHooks[frame] = true
+			healthBar:HookScript("OnValueChanged", ourHealthOnValueChanged)
+		end
 	end
 end
 
