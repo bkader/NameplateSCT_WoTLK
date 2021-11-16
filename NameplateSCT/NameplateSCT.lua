@@ -251,7 +251,10 @@ local function getFontString()
 	fontString:Show()
 
 	if NameplateSCT.db.global.showIcon then
-		fontString.icon = fontString.icon or NameplateSCT.frame:CreateTexture(nil, "BACKGROUND")
+		if not fontString.icon then
+			fontString.icon = NameplateSCT.frame:CreateTexture(nil, "BACKGROUND")
+			fontString.icon:SetTexCoord(0.062, 0.938, 0.062, 0.938)
+		end
 		fontString.icon:SetAlpha(1)
 		fontString.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
 		fontString.icon:Hide()
