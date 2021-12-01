@@ -94,8 +94,7 @@ lib.level_region = lib.level_region or setmetatable({}, {__index = function(t, f
 	t[frame] = lib:GetLevelRegion(frame)
 	return t[frame]
 end})
-lib.boss_region = lib.boss_region or setmetatable({}, {
-__index = function(t, frame)
+lib.boss_region = lib.boss_region or setmetatable({}, {__index = function(t, frame)
 	t[frame] = lib:GetBossRegion(frame)
 	return t[frame]
 end})
@@ -117,11 +116,11 @@ lib.raidicon_region = lib.raidicon_region or setmetatable({}, {__index = functio
 end})
 
 --bar locations
-lib.health_bar = lib.health_bar or setmetatable({}, { __index = function(t, frame)
+lib.health_bar = lib.health_bar or setmetatable({}, {__index = function(t, frame)
 	t[frame] = lib:GetHealthBar(frame)
 	return t[frame]
 end})
-lib.cast_bar = lib.cast_bar or setmetatable({}, { __index = function(t, frame)
+lib.cast_bar = lib.cast_bar or setmetatable({}, {__index = function(t, frame)
 	t[frame] = lib:GetCastBar(frame)
 	return t[frame]
 end})
@@ -225,8 +224,8 @@ function lib:GetNameRegion(frame)
 		return frame.extended.regions.name
 	elseif frame.aloftData and frame.aloftData.nameTextRegion then --Aloft
 		return frame.aloftData.nameTextRegion
-	elseif frame.kui then --KuiNameplates
-		return frame.kui.oldName
+	elseif frame.oldName then --KuiNameplates
+		return frame.oldName
 	elseif frame.oldname then --dNameplates
 		return frame.oldname
 	end
@@ -240,9 +239,7 @@ function lib:GetLevelRegion(frame)
 		return frame.extended.regions.level
 	elseif frame.aloftData and frame.aloftData.levelTextRegion then --Aloft
 		return frame.aloftData.levelTextRegion
-	elseif frame.kui then --KuiNameplates
-		return frame.kui.level
-	elseif frame.level then --dNameplates
+	elseif frame.level then --dNameplates & KuiNameplates
 		return frame.level
 	end
 
@@ -254,9 +251,7 @@ function lib:GetBossRegion(frame)
 		return frame.extended.regions.dangerskull
 	elseif frame.aloftData and frame.aloftData.bossIconRegion then --aloft
 		return frame.aloftData.bossIconRegion
-	elseif frame.kui then --KuiNameplates
-		return frame.kui.boss
-	elseif frame.boss then --dNameplates
+	elseif frame.boss then --dNameplates & KuiNameplates
 		return frame.boss
 	end
 	return select(regionIndex.dangerSkull, frame:GetRegions())
@@ -267,8 +262,8 @@ function lib:GetEliteRegion(frame)
 		return frame.extended.regions.eliteicon
 	elseif frame.aloftData and frame.aloftData.stateIconRegion then --aloft
 		return frame.aloftData.stateIconRegion
-	elseif frame.kui then --KuiNameplates
-		return frame.kui.state
+	elseif frame.state then --KuiNameplates
+		return frame.state
 	elseif frame.elite then --dNameplates
 		return frame.elite
 	end
@@ -280,8 +275,8 @@ function lib:GetThreatRegion(frame)
 		return frame.extended.regions.threatGlow
 	elseif frame.aloftData and frame.aloftData.nativeGlowRegion then
 		return frame.aloftData.nativeGlowRegion
-	elseif frame.kui then --KuiNameplates
-		return frame.kui.glow
+	elseif frame.glow then --KuiNameplates
+		return frame.glow
 	elseif frame.oldglow then --dNameplates
 		return frame.oldglow
 	end
@@ -300,8 +295,6 @@ function lib:GetHightlightRegion(frame)
 		end
 	elseif frame.aloftData and frame.aloftData.highlightRegion then
 		return frame.aloftData.highlightRegion
-	elseif frame.kui then --KuiNameplates
-		return frame.kui.highlight
 	elseif frame.highlight then --dNameplates or KuiNameplates
 		return frame.highlight
 	end
@@ -314,8 +307,8 @@ function lib:GetRaidIconRegion(frame)
 		return frame.extended.regions.raidicon
 	elseif frame.aloftData and frame.aloftData.raidIconRegion then
 		return frame.aloftData.raidIconRegion
-	elseif frame.kui then
-		return frame.kui.icon
+	elseif frame.icon then
+		return frame.icon
 	end
 	return select(regionIndex.raidIcon, frame:GetRegions())
 end
@@ -327,8 +320,8 @@ function lib:GetHealthBar(frame)
 	if frame.extended and frame.extended.bars and frame.extended.bars.health then
 		--Aloft changes the bar color. Our functions will have to use aloftData.originalHealthBarR
 		return frame.extended.bars.health
-	elseif frame.kui then --KuiNameplates
-		return frame.kui.oldHealth
+	elseif frame.oldHealth then --KuiNameplates
+		return frame.oldHealth
 	elseif frame.healthOriginal then --dNameplates
 		return frame.healthOriginal
 	end
@@ -338,8 +331,8 @@ end
 function lib:GetCastBar(frame)
 	if frame.extended and frame.extended.bars and frame.extended.bars.castbar then
 		return frame.extended.bars.castbar
-	elseif frame.kui and frame.kui.castBar then
-		return frame.kui.castBar
+	elseif frame.castbar then
+		return frame.castBar
 	elseif frame.aloftData and frame.aloftData.castBar then
 		return frame.aloftData.castBar
 	end
@@ -557,7 +550,7 @@ local function CheckForFakePlate(frame)
 		lib.fakePlate[frame] = frame.extended
 
 		lib.callbacks:Fire("LibNameplates_RecycleNameplate", frame)
-		 --Hide real plate so addon unhook their stuff.
+		--Hide real plate so addon unhook their stuff.
 		lib.callbacks:Fire("LibNameplates_NewNameplate", lib.fakePlate[frame])
 	end
 end
@@ -609,10 +602,10 @@ end
 
 --------------------------------------------------------------------------------------
 function lib.healthOnValueChanged(frame, ...) --
--- This fires before OnShow fires and the regions haven't been updated yet. 		--
--- So I make sure lib.isOnScreen[plate] is true before working on the HP change.	--
---------------------------------------------------------------------------------------
-	local plate = frame.kuiParent or frame:GetParent()
+	-- This fires before OnShow fires and the regions haven't been updated yet. 		--
+	-- So I make sure lib.isOnScreen[plate] is true before working on the HP change.	--
+	--------------------------------------------------------------------------------------
+	local plate = frame:GetParent()
 	local currentHP = ...
 
 	--strange, when a nameplate's not on screen, we still get HP changes. It's not relyable but might be of use somehow...
@@ -635,19 +628,16 @@ function lib:HookNameplate(frame)
 		self.onHideHooks[frame] = true
 		frame:HookScript("OnHide", ourOnHide)
 	end
-
 	if frame:HasScript("OnShow") and not self.onShowHooks[frame] then
 		self.onShowHooks[frame] = true
 		frame:HookScript("OnShow", ourOnShow)
 	end
-
 	if frame:HasScript("OnUpdate") and not self.onUpdateHooks[frame] then
 		self.onUpdateHooks[frame] = true
 		frame:HookScript("OnUpdate", ourOnUpdate)
 	end
-
 	local healthBar = self.health_bar[frame]
-	if healthBar and not self.healthOnValueChangedHooks[frame] and healthBar:HasScript("OnValueChanged") then
+	if healthBar and not self.healthOnValueChangedHooks[frame] and healthBar:GetScript("OnValueChanged") then
 		self.healthOnValueChangedHooks[frame] = true
 		healthBar:HookScript("OnValueChanged", ourHealthOnValueChanged)
 	end
@@ -902,7 +892,10 @@ end
 
 local function GetHealthBarColor(frame)
 	if frame.aloftData then
-		local r, g, b = frame.aloftData.originalHealthBarR, frame.aloftData.originalHealthBarG, frame.aloftData.originalHealthBarB
+		local r, g, b =
+			frame.aloftData.originalHealthBarR,
+			frame.aloftData.originalHealthBarG,
+			frame.aloftData.originalHealthBarB
 		return r, g, b
 	end
 
@@ -964,8 +957,8 @@ end})
 
 --API
 
-function lib:GetName(frame)
-	local frame = self.realPlate[frame] or frame
+function lib:GetName(f)
+	local frame = self.realPlate[f] or f
 	local nameRegion = self.name_region[frame]
 	if nameRegion and nameRegion.GetText then
 		return self.noColorName[nameRegion:GetText()]
@@ -973,8 +966,8 @@ function lib:GetName(frame)
 	return nil
 end
 
-function lib:GetLevel(frame)
-	local frame = self.realPlate[frame] or frame
+function lib:GetLevel(f)
+	local frame = self.realPlate[f] or f
 	local region = self.level_region[frame]
 	if region and region.GetText then
 		return self.noColorNum[region:GetText()]
@@ -982,8 +975,8 @@ function lib:GetLevel(frame)
 	return 0
 end
 
-function lib:GetScale(frame)
-	local frame = self.realPlate[frame] or frame
+function lib:GetScale(f)
+	local frame = self.realPlate[f] or f
 	if frame.extended then
 		frame = frame.extended
 	elseif frame.kui then
@@ -992,8 +985,8 @@ function lib:GetScale(frame)
 	return frame:GetScale()
 end
 
-function lib:GetVisibleFrame(frame)
-	local frame = self.realPlate[frame] or frame
+function lib:GetVisibleFrame(f)
+	local frame = self.realPlate[f] or f
 	if frame.extended then
 		frame = frame.extended
 	elseif frame.kui then
@@ -1002,8 +995,8 @@ function lib:GetVisibleFrame(frame)
 	return frame
 end
 
-function lib:GetReaction(frame)
-	local frame = self.realPlate[frame] or frame
+function lib:GetReaction(f)
+	local frame = self.realPlate[f] or f
 
 	local r, g, b = GetHealthBarColor(frame)
 	if r then
@@ -1013,8 +1006,8 @@ function lib:GetReaction(frame)
 	return nil
 end
 
-function lib:GetType(frame)
-	local frame = self.realPlate[frame] or frame
+function lib:GetType(f)
+	local frame = self.realPlate[f] or f
 
 	local r, g, b = GetHealthBarColor(frame)
 	if r then
@@ -1024,8 +1017,8 @@ function lib:GetType(frame)
 	return nil
 end
 
-function lib:IsBoss(frame)
-	local frame = self.realPlate[frame] or frame
+function lib:IsBoss(f)
+	local frame = self.realPlate[f] or f
 
 	local region = self.boss_region[frame]
 	if region and region.IsShown then
@@ -1036,8 +1029,8 @@ function lib:IsBoss(frame)
 end
 
 --This will return nil if we're not in a PvP zone (like in cities)
-function lib:GetClass(frame)
-	local frame = self.realPlate[frame] or frame
+function lib:GetClass(f)
+	local frame = self.realPlate[f] or f
 
 	local r, g, b = GetHealthBarColor(frame)
 	if r then
@@ -1047,8 +1040,8 @@ function lib:GetClass(frame)
 	return nil
 end
 
-function lib:IsElite(frame)
-	local frame = self.realPlate[frame] or frame
+function lib:IsElite(f)
+	local frame = self.realPlate[f] or f
 
 	local region = self.elite_region[frame]
 	if region and region.IsShown then
@@ -1059,8 +1052,8 @@ end
 
 -- Note: GetThreatSituation sometimes returns wrong info on OnShow (NewNameplate) event.
 -- It sometimes returns the previous owner of the nameplate's threat.
-function lib:GetThreatSituation(frame)
-	local frame = self.realPlate[frame] or frame
+function lib:GetThreatSituation(f)
+	local frame = self.realPlate[f] or f
 
 	local region = self.threat_region[frame]
 	if region and region.GetVertexColor then
@@ -1070,13 +1063,13 @@ function lib:GetThreatSituation(frame)
 	return nil
 end
 
-function lib:IsTarget(frame)
-	local frame = self.realPlate[frame] or frame
+function lib:IsTarget(f)
+	local frame = self.realPlate[f] or f
 	return frame:IsShown() and frame:GetAlpha() == 1 and UnitExists("target") or false
 end
 
-function lib:GetHealthMax(frame)
-	local frame = self.realPlate[frame] or frame
+function lib:GetHealthMax(f)
+	local frame = self.realPlate[f] or f
 
 	local bar = self.health_bar[frame]
 	if bar and bar.GetMinMaxValues then
@@ -1086,8 +1079,8 @@ function lib:GetHealthMax(frame)
 	return nil
 end
 
-function lib:GetHealth(frame)
-	local frame = self.realPlate[frame] or frame
+function lib:GetHealth(f)
+	local frame = self.realPlate[f] or f
 
 	local bar = self.health_bar[frame]
 	if bar and bar.GetValue then
@@ -1096,8 +1089,8 @@ function lib:GetHealth(frame)
 	return nil
 end
 
-function lib:GetRaidIcon(frame)
-	local frame = self.realPlate[frame] or frame
+function lib:GetRaidIcon(f)
+	local frame = self.realPlate[f] or f
 
 	local region = self.raidicon_region[frame]
 	if region and region.IsShown and region:IsShown() and region.GetTexCoord then
@@ -1111,8 +1104,8 @@ function lib:GetRaidIcon(frame)
 	return nil
 end
 
-function lib:IsMouseover(frame)
-	local frame = self.realPlate[frame] or frame
+function lib:IsMouseover(f)
+	local frame = self.realPlate[f] or f
 
 	local region = self.hightlight_region[frame]
 	if region and region.IsShown then
@@ -1122,8 +1115,8 @@ function lib:IsMouseover(frame)
 	return nil
 end
 
-function lib:IsCasting(frame)
-	local frame = self.realPlate[frame] or frame
+function lib:IsCasting(f)
+	local frame = self.realPlate[f] or f
 
 	local bar = self.cast_bar[frame]
 	if bar and bar.IsShown then
@@ -1132,8 +1125,8 @@ function lib:IsCasting(frame)
 	return nil
 end
 
-function lib:IsInCombat(frame)
-	local frame = self.realPlate[frame] or frame
+function lib:IsInCombat(f)
+	local frame = self.realPlate[f] or f
 
 	local region = self.name_region[frame]
 	if region and region.GetTextColor then
@@ -1143,8 +1136,8 @@ function lib:IsInCombat(frame)
 	return nil
 end
 
-function lib:IsMarked(frame)
-	local frame = self.realPlate[frame] or frame
+function lib:IsMarked(f)
+	local frame = self.realPlate[f] or f
 
 	local region = self.raidicon_region[frame]
 	if region and region.IsShown then
@@ -1154,8 +1147,8 @@ function lib:IsMarked(frame)
 	return nil
 end
 
-function lib:GetGUID(frame)
-	local frame = self.realPlate[frame] or frame
+function lib:GetGUID(f)
+	local frame = self.realPlate[f] or f
 	return self.plateGUIDs[frame]
 end
 
@@ -1312,14 +1305,12 @@ function lib.ModifyOnUpdate()
 	}
 
 	-- Our script is trying to access something not in our environment.
-	setmetatable(smallenv, {
-		__index = function(t, i)
-			-- Create a upvalue in our environment.
-			-- I hope this will give faster lookup times then making '__Index = _G' would.
-			t[i] = _G[i]
-			return t[i]
-		end
-	})
+	setmetatable(smallenv, {__index = function(t, i)
+		-- Create a upvalue in our environment.
+		-- I hope this will give faster lookup times then making '__Index = _G' would.
+		t[i] = _G[i]
+		return t[i]
+	end})
 
 	setfenv(update, smallenv) --Set our update function to use our environment.
 
