@@ -6,7 +6,7 @@ SVN:  svn://svn.wowace.com/wow/libnameplate-1-0/mainline/trunk
 Description: Alerts addons when a nameplate is shown or hidden. Has API to get info such as name, level, class, ect from the nameplate. LibNameplates tries to function with the default nameplates, Aloft, caelNamePlates and TidyPlates (buggy).
 Dependencies: LibStub, CallbackHandler-1.0
 ]]
-local MAJOR, MINOR = "LibNameplates-1.0", 22
+local MAJOR, MINOR = "LibNameplates-1.0", 23
 if not LibStub then
 	error(MAJOR .. " requires LibStub.")
 	return
@@ -514,6 +514,8 @@ local function ourOnShow(...)
 end
 
 function lib.OnNameplateHide(frame, ...)
+	-- silly KuiNameplates
+	if frame and frame.MOVING then return end
 	lib.isOnScreen[frame] = false
 	lib.isOnUpdating[frame] = false
 	lib.combatStatus[frame] = false
