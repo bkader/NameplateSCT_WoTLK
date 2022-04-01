@@ -5,7 +5,7 @@
 ## OptionalDeps: Ace3, LibEasing
 ## SavedVariables: NameplateSCTDB
 ## Author: Kader (|cff808080bkader#6361|r)
-## X-Date: 2022-20-27 @ 04:25 PM |cff808080UTC|r
+## X-Date: 2022-04-01 @ 05:32 PM |cff808080UTC|r
 ## X-Credits: mpstark, Justwait
 ## X-Category: Combat
 ## X-Email: bkader@mail.com
