@@ -15,9 +15,9 @@ local LibNameplates = LibStub("LibNameplates-1.0")
 -------------
 local CreateFrame = CreateFrame
 local math_floor, math_pow, math_random = math.floor, math.pow, math.random
-local tostring, tonumber = tostring, tonumber
+local tostring, tonumber, band = tostring, tonumber, bit.band
 local format, find = string.format, string.find
-local next, select, pairs, ipairs = next, select, pairs, ipairs
+local next, pairs, ipairs = next, pairs, ipairs
 local tinsert, tremove = table.insert, table.remove
 
 ------------
@@ -97,6 +97,7 @@ local defaults = {
 		enabled = true,
 		xOffset = 0,
 		yOffset = 0,
+		includeHeals = false,
 		personalOnly = false,
 		xOffsetPersonal = 0,
 		yOffsetPersonal = -100,
@@ -177,8 +178,8 @@ local ANIMATION_RAINFALL_Y_MAX = 100
 local ANIMATION_RAINFALL_Y_START_MIN = 5
 local ANIMATION_RAINFALL_Y_START_MAX = 15
 
-local AutoAttack = select(1, GetSpellInfo(6603))
-local AutoShot = select(1, GetSpellInfo(75))
+local AutoAttack = GetSpellInfo(6603)
+local AutoShot = GetSpellInfo(75)
 local DAMAGE_TYPE_COLORS = {
 	[SCHOOL_MASK_PHYSICAL] = "FFFF00",
 	[SCHOOL_MASK_HOLY] = "FFE680",
@@ -352,6 +353,8 @@ function NameplateSCT:OnEnable()
 	playerGUID = UnitGUID("player")
 	self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 	self.db.global.enabled = true
+	AutoAttack = AutoAttack or GetSpellInfo(6603)
+	AutoShot = AutoShot or GetSpellInfo(75)
 end
 
 function NameplateSCT:OnDisable()
@@ -411,8 +414,7 @@ local function AnimationOnUpdate()
 
 				local frame = fontString:GetParent()
 				local currentStrata = frame:GetFrameStrata()
-				local strataRequired =
-					isTarget and NameplateSCT.db.global.strata.target or NameplateSCT.db.global.strata.offTarget
+				local strataRequired = isTarget and NameplateSCT.db.global.strata.target or NameplateSCT.db.global.strata.offTarget
 				if currentStrata ~= strataRequired then
 					frame:SetFrameStrata(strataRequired)
 				end
@@ -431,17 +433,12 @@ local function AnimationOnUpdate()
 					if elapsed < fontString.animatingDuration / 6 then
 						fontString:SetText(fontString.NSCTText)
 
-						local size =
-							powSizing(elapsed, fontString.animatingDuration / 6, height / 2, height * 2, height)
+						local size = powSizing(elapsed, fontString.animatingDuration / 6, height / 2, height * 2, height)
 						fontString:SetTextHeight(size)
 					else
 						fontString.pow = nil
 						fontString:SetTextHeight(height)
-						fontString:SetFont(
-							getFontPath(NameplateSCT.db.global.font),
-							fontString.NSCTFontSize,
-							NameplateSCT.db.global.fontFlag
-						)
+						fontString:SetFont(getFontPath(NameplateSCT.db.global.font), fontString.NSCTFontSize, NameplateSCT.db.global.fontFlag)
 						if NameplateSCT.db.global.textShadow then
 							fontString:SetShadowOffset(1, -1)
 						else
@@ -532,7 +529,6 @@ local missedSpellEvents = {
 	SPELL_BUILDING_MISSED = true
 }
 
-local BITMASK_PETS = COMBATLOG_OBJECT_TYPE_PET + COMBATLOG_OBJECT_TYPE_GUARDIAN
 function NameplateSCT:COMBAT_LOG_EVENT_UNFILTERED(_, _, clueevent, srcGUID, srcName, srcFlags, dstGUID, dstName, _, ...)
 	if NameplateSCT.db.global.personalOnly and NameplateSCT.db.global.personal and playerGUID ~= dstGUID then
 		return
@@ -551,15 +547,13 @@ function NameplateSCT:COMBAT_LOG_EVENT_UNFILTERED(_, _, clueevent, srcGUID, srcN
 		elseif clueevent == "SWING_MISSED" then
 			self:MissEvent(dstGUID, AutoAttack, dstGUID == playerGUID and AutoAttack or ..., 6603)
 		end
-	elseif bit.band(srcFlags, BITMASK_PETS) > 0 and bit.band(srcFlags, COMBATLOG_OBJECT_AFFILIATION_MINE) > 0 then -- Pet/Guardian events
-		if dstGUID ~= playerGUID and NameplateSCT.db.global.personal then
-			if damageSpellEvents[clueevent] then
-				local spellId, spellName, _, amount, _, _, _, _, _, critical, _, _ = ...
-				self:DamageEvent(dstGUID, spellName, amount, "pet", critical, spellId)
-			elseif clueevent == "SWING_DAMAGE" then
-				local amount, _, _, _, _, _, critical, _, _ = ...
-				self:DamageEvent(dstGUID, AutoAttack, amount, "pet", critical, 6603)
-			end
+	elseif bit.band(srcFlags, COMBATLOG_FILTER_MY_PET) ~= 0 then -- Pet/Guardian events
+		if damageSpellEvents[clueevent] then
+			local spellId, spellName, _, amount, _, _, _, _, _, critical, _, _ = ...
+			self:DamageEvent(dstGUID, spellName, amount, "pet", critical, spellId)
+		elseif clueevent == "SWING_DAMAGE" then
+			local amount, _, _, _, _, _, critical, _, _ = ...
+			self:DamageEvent(dstGUID, AutoAttack, amount, "pet", critical, 6603)
 		end
 	end
 end
@@ -596,9 +590,7 @@ function NameplateSCT:DamageEvent(guid, spellName, amount, school, crit, spellId
 	end
 
 	-- skip if this damage event is disabled
-	if (animation == "disabled") then
-		return
-	end
+	if (animation == "disabled") then return end
 
 	local isTarget = (UnitGUID("target") == guid)
 
@@ -635,10 +627,7 @@ function NameplateSCT:DamageEvent(guid, spellName, amount, school, crit, spellId
 
 	-- color text
 	if guid ~= playerGUID then
-		if
-			self.db.global.damageColor and (spellName == AutoAttack or spellName == AutoShot) and
-				DAMAGE_TYPE_COLORS[spellName]
-		 then
+		if self.db.global.damageColor and (spellName == AutoAttack or spellName == AutoShot) and DAMAGE_TYPE_COLORS[spellName] then
 			text = "\124cff" .. DAMAGE_TYPE_COLORS[spellName] .. text .. "\124r"
 		elseif self.db.global.damageColor and school and DAMAGE_TYPE_COLORS[school] then
 			text = "\124cff" .. DAMAGE_TYPE_COLORS[school] .. text .. "\124r"
@@ -771,9 +760,9 @@ function NameplateSCT:DisplayText(guid, text, size, alpha, animation, spellId, p
 
 	fontString.guid = guid
 
-	local texture = select(3, GetSpellInfo(spellId or spellName))
-	if not texture then
-		texture = select(3, GetSpellInfo(spellName))
+	local _, _, texture = GetSpellInfo(spellId or spellName)
+	if not texture and spellName then
+		_, _, texture = GetSpellInfo(spellName)
 	end
 
 	if NameplateSCT.db.global.showIcon and texture then
@@ -790,10 +779,8 @@ function NameplateSCT:DisplayText(guid, text, size, alpha, animation, spellId, p
 		)
 		icon:SetAlpha(alpha)
 		fontString.icon = icon
-	else
-		if fontString.icon then
-			fontString.icon:Hide()
-		end
+	elseif fontString.icon then
+		fontString.icon:Hide()
 	end
 	self:Animate(fontString, nameplate, NameplateSCT.db.global.animations.animationspeed, animation)
 end
@@ -802,10 +789,20 @@ end
 -- OPTIONS --
 -------------
 
+local addonDisabled = function()
+	return not NameplateSCT.db.global.enabled
+end
+
 local menu = {
 	name = "NameplateSCT \124c00ffffffBackported\124r by \124cfff58cbaKader\124r",
 	handler = NameplateSCT,
 	type = "group",
+	get = function(i)
+		return NameplateSCT.db.global[i[#i]]
+	end,
+	set = function(i, val)
+		NameplateSCT.db.global[i[#i]] = val
+	end,
 	args = {
 		nameplatesEnabled = {
 			type = "description",
@@ -814,139 +811,83 @@ local menu = {
 				return GetCVar("nameplateShowEnemies") == "1"
 			end,
 			order = 1,
-			width = "full"
-		},
-		nameplatesEnabled2 = {
-			type = "description",
-			name = "\124cFFFF0000" .. L["YOUR ENEMY NAMEPLATES ARE DISABLED, NAMEPLATESCT WILL NOT WORK!!"] .. "\124r",
-			hidden = function()
-				return GetCVar("nameplateShowEnemies") == "1"
-			end,
-			order = 3,
-			width = "full"
+			width = "double"
 		},
 		enable = {
 			type = "toggle",
 			name = L["Enable"],
 			desc = L["If the addon is enabled."],
 			get = "IsEnabled",
-			set = function(_, newValue)
-				if (not newValue) then
-					NameplateSCT:Disable()
-				else
+			set = function(_, val)
+				if val then
 					NameplateSCT:Enable()
+				else
+					NameplateSCT:Disable()
 				end
 			end,
 			order = 4,
-			width = "full"
+			width = "double"
 		},
-		personalNameplate = {
+		personal = {
 			type = "toggle",
 			name = L["Personal SCT"],
 			desc = L["Also show numbers when you take damage on your personal nameplate or center screen"],
-			get = function()
-				return NameplateSCT.db.global.personal
-			end,
-			set = function(_, newValue)
-				NameplateSCT.db.global.personal = newValue
-			end,
-			order = 6,
-			disabled = function()
-				return not NameplateSCT.db.global.enabled
-			end
+			disabled = addonDisabled,
+			order = 6
 		},
-		personalNameplateOnly = {
+		personalOnly = {
 			type = "toggle",
 			name = L["Personal SCT Only"],
 			desc = L["Don't display any numbers on enemies and only use the personal SCT."],
-			get = function()
-				return NameplateSCT.db.global.personalOnly
-			end,
-			set = function(_, newValue)
-				NameplateSCT.db.global.personalOnly = newValue
-			end,
-			order = 7,
 			disabled = function()
 				return (not NameplateSCT.db.global.personal or not NameplateSCT.db.global.enabled)
-			end
+			end,
+			order = 7
 		},
 		animations = {
 			type = "group",
 			name = L["Animations"],
 			order = 30,
 			inline = true,
-			disabled = function()
-				return not NameplateSCT.db.global.enabled
+			disabled = addonDisabled,
+			get = function(i)
+				return NameplateSCT.db.global.animations[i[#i]]
+			end,
+			set = function(i, val)
+				NameplateSCT.db.global.animations[i[#i]] = val
 			end,
 			args = {
-				speed = {
+				animationspeed = {
 					type = "range",
 					name = L["Animation Speed"],
 					desc = L["Default speed: 1"],
-					disabled = function()
-						return not NameplateSCT.db.global.enabled
-					end,
 					min = 0.5,
 					max = 2,
 					step = .1,
-					get = function()
-						return NameplateSCT.db.global.animations.animationspeed
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.animations.animationspeed = newValue
-					end,
 					order = 1,
-					width = "full"
+					width = "double"
 				},
 				ability = {
 					type = "select",
 					name = L["Abilities"],
-					desc = "",
-					get = function()
-						return NameplateSCT.db.global.animations.ability
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.animations.ability = newValue
-					end,
 					values = animationValues,
 					order = 2
 				},
 				crit = {
 					type = "select",
 					name = L["Criticals"],
-					desc = "",
-					get = function()
-						return NameplateSCT.db.global.animations.crit
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.animations.crit = newValue
-					end,
 					values = animationValues,
 					order = 3
 				},
 				miss = {
 					type = "select",
 					name = L["Miss/Parry/Dodge/etc"],
-					desc = "",
-					get = function()
-						return NameplateSCT.db.global.animations.miss
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.animations.miss = newValue
-					end,
 					values = animationValues,
 					order = 4
 				},
 				autoattack = {
 					type = "select",
 					name = L["Auto Attacks"],
-					desc = "",
-					get = function()
-						return NameplateSCT.db.global.animations.autoattack
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.animations.autoattack = newValue
-					end,
 					values = animationValues,
 					order = 5
 				},
@@ -954,12 +895,6 @@ local menu = {
 					type = "select",
 					name = L["Criticals"],
 					desc = L["Auto attacks that are critical hits"],
-					get = function()
-						return NameplateSCT.db.global.animations.autoattackcrit
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.animations.autoattackcrit = newValue
-					end,
 					values = animationValues,
 					order = 6
 				},
@@ -967,12 +902,6 @@ local menu = {
 					type = "toggle",
 					name = L["Embiggen Crits"],
 					desc = L["Embiggen critical auto attacks"],
-					get = function()
-						return NameplateSCT.db.global.sizing.autoattackcritsizing
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.sizing.autoattackcritsizing = newValue
-					end,
 					order = 7
 				}
 			}
@@ -982,63 +911,34 @@ local menu = {
 			name = L["Appearance/Offsets"],
 			order = 50,
 			inline = true,
-			disabled = function()
-				return not NameplateSCT.db.global.enabled
-			end,
+			disabled = addonDisabled,
 			args = {
 				font = {
 					type = "select",
 					dialogControl = "LSM30_Font",
 					name = L["Font"],
-					order = 1,
 					values = AceGUIWidgetLSMlists.font,
-					get = function()
-						return NameplateSCT.db.global.font
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.font = newValue
-					end
+					order = 1
 				},
 				fontFlag = {
 					type = "select",
 					name = L["Font Flags"],
-					desc = "",
-					get = function()
-						return NameplateSCT.db.global.fontFlag
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.fontFlag = newValue
-					end,
 					values = fontFlags,
 					order = 2
 				},
-				fontShadow = {
+				textShadow = {
 					type = "toggle",
 					name = L["Text Shadow"],
-					get = function()
-						return NameplateSCT.db.global.textShadow
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.textShadow = newValue
-					end,
 					order = 3
 				},
 				damageColor = {
 					type = "toggle",
 					name = L["Use Damage Type Color"],
-					desc = "",
-					get = function()
-						return NameplateSCT.db.global.damageColor
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.damageColor = newValue
-					end,
 					order = 4
 				},
 				defaultColor = {
 					type = "color",
 					name = L["Default Color"],
-					desc = "",
 					disabled = function()
 						return NameplateSCT.db.global.damageColor
 					end,
@@ -1058,14 +958,8 @@ local menu = {
 					softMin = -75,
 					softMax = 75,
 					step = 1,
-					get = function()
-						return NameplateSCT.db.global.xOffset
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.xOffset = newValue
-					end,
 					order = 10,
-					width = "full"
+					width = "double"
 				},
 				yOffset = {
 					type = "range",
@@ -1074,53 +968,38 @@ local menu = {
 					softMin = -75,
 					softMax = 75,
 					step = 1,
-					get = function()
-						return NameplateSCT.db.global.yOffset
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.yOffset = newValue
-					end,
 					order = 11,
-					width = "full"
+					width = "double"
 				},
 				modOffTargetStrata = {
 					type = "toggle",
 					name = L["Use Separate Off-Target Strata"],
-					desc = "",
-					get = function()
-						return NameplateSCT.db.global.modOffTargetStrata
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.modOffTargetStrata = newValue
-					end,
 					order = 8
 				},
 				targetStrata = {
 					type = "select",
 					name = L["Target Strata"],
-					desc = "",
 					get = function()
 						return NameplateSCT.db.global.strata.target
 					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.strata.target = newValue
+					set = function(_, val)
+						NameplateSCT.db.global.strata.target = val
 						adjustStrata()
 					end,
 					values = stratas,
 					order = 9
 				},
-				offTargetStrata = {
+				offTarget = {
 					type = "select",
 					name = L["Off-Target Strata"],
-					desc = "",
 					disabled = function()
 						return not NameplateSCT.db.global.modOffTargetStrata
 					end,
 					get = function()
 						return NameplateSCT.db.global.strata.offTarget
 					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.strata.offTarget = newValue
+					set = function(_, val)
+						NameplateSCT.db.global.strata.offTarget = val
 					end,
 					values = stratas,
 					order = 10
@@ -1130,22 +1009,12 @@ local menu = {
 					name = L["Icons"],
 					order = 60,
 					inline = true,
-					disabled = function()
-						return not NameplateSCT.db.global.enabled
-					end,
 					args = {
 						showIcon = {
 							type = "toggle",
 							name = L["Display Icon"],
-							desc = "",
-							get = function()
-								return NameplateSCT.db.global.showIcon
-							end,
-							set = function(_, newValue)
-								NameplateSCT.db.global.showIcon = newValue
-							end,
 							order = 1,
-							width = "full"
+							width = "double"
 						},
 						iconScale = {
 							type = "range",
@@ -1158,27 +1027,14 @@ local menu = {
 							hidden = function()
 								return not NameplateSCT.db.global.showIcon
 							end,
-							get = function()
-								return NameplateSCT.db.global.iconScale
-							end,
-							set = function(_, newValue)
-								NameplateSCT.db.global.iconScale = newValue
-							end,
 							order = 3,
 							width = "Half"
 						},
 						iconPosition = {
 							type = "select",
 							name = L["Position"],
-							desc = "",
 							hidden = function()
 								return not NameplateSCT.db.global.showIcon
-							end,
-							get = function()
-								return NameplateSCT.db.global.iconPosition or "Right"
-							end,
-							set = function(_, newValue)
-								NameplateSCT.db.global.iconPosition = newValue
 							end,
 							values = positionValues,
 							order = 6
@@ -1192,12 +1048,6 @@ local menu = {
 							softMin = -30,
 							softMax = 30,
 							step = 1,
-							get = function()
-								return NameplateSCT.db.global.xOffsetIcon or 0
-							end,
-							set = function(_, newValue)
-								NameplateSCT.db.global.xOffsetIcon = newValue
-							end,
 							order = 7,
 							width = "Half"
 						},
@@ -1210,12 +1060,6 @@ local menu = {
 							softMin = -30,
 							softMax = 30,
 							step = 1,
-							get = function()
-								return NameplateSCT.db.global.yOffsetIcon or 0
-							end,
-							set = function(_, newValue)
-								NameplateSCT.db.global.yOffsetIcon = newValue
-							end,
 							order = 8,
 							width = "Half"
 						}
@@ -1231,19 +1075,16 @@ local menu = {
 			hidden = function()
 				return not NameplateSCT.db.global.personal
 			end,
-			disabled = function()
-				return not NameplateSCT.db.global.enabled
-			end,
+			disabled = addonDisabled,
 			args = {
 				normalPersonal = {
 					type = "select",
 					name = L["Default"],
-					desc = "",
 					get = function()
 						return NameplateSCT.db.global.animationsPersonal.normal
 					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.animationsPersonal.normal = newValue
+					set = function(_, val)
+						NameplateSCT.db.global.animationsPersonal.normal = val
 					end,
 					values = animationValues,
 					order = 5
@@ -1251,12 +1092,11 @@ local menu = {
 				critPersonal = {
 					type = "select",
 					name = L["Criticals"],
-					desc = "",
 					get = function()
 						return NameplateSCT.db.global.animationsPersonal.crit
 					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.animationsPersonal.crit = newValue
+					set = function(_, val)
+						NameplateSCT.db.global.animationsPersonal.crit = val
 					end,
 					values = animationValues,
 					order = 10
@@ -1264,12 +1104,11 @@ local menu = {
 				missPersonal = {
 					type = "select",
 					name = L["Miss/Parry/Dodge/etc"],
-					desc = "",
 					get = function()
 						return NameplateSCT.db.global.animationsPersonal.miss
 					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.animationsPersonal.miss = newValue
+					set = function(_, val)
+						NameplateSCT.db.global.animationsPersonal.miss = val
 					end,
 					values = animationValues,
 					order = 15
@@ -1277,19 +1116,11 @@ local menu = {
 				damageColorPersonal = {
 					type = "toggle",
 					name = L["Use Damage Type Color"],
-					desc = "",
-					get = function()
-						return NameplateSCT.db.global.damageColorPersonal
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.damageColorPersonal = newValue
-					end,
 					order = 40
 				},
 				defaultColorPersonal = {
 					type = "color",
 					name = L["Default Color"],
-					desc = "",
 					disabled = function()
 						return NameplateSCT.db.global.damageColorPersonal
 					end,
@@ -1312,14 +1143,8 @@ local menu = {
 					softMin = -400,
 					softMax = 400,
 					step = 1,
-					get = function()
-						return NameplateSCT.db.global.xOffsetPersonal
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.xOffsetPersonal = newValue
-					end,
 					order = 50,
-					width = "full"
+					width = "double"
 				},
 				yOffsetPersonal = {
 					type = "range",
@@ -1331,14 +1156,8 @@ local menu = {
 					softMin = -400,
 					softMax = 400,
 					step = 1,
-					get = function()
-						return NameplateSCT.db.global.yOffsetPersonal
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.yOffsetPersonal = newValue
-					end,
 					order = 60,
-					width = "full"
+					width = "double"
 				}
 			}
 		},
@@ -1347,34 +1166,18 @@ local menu = {
 			name = L["Text Formatting"],
 			order = 90,
 			inline = true,
-			disabled = function()
-				return not NameplateSCT.db.global.enabled
-			end,
+			disabled = addonDisabled,
 			args = {
 				truncate = {
 					type = "toggle",
 					name = L["Truncate Number"],
-					desc = "",
-					get = function()
-						return NameplateSCT.db.global.truncate
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.truncate = newValue
-					end,
 					order = 1
 				},
 				truncateLetter = {
 					type = "toggle",
 					name = L["Show Truncated Letter"],
-					desc = "",
 					disabled = function()
 						return not NameplateSCT.db.global.enabled or not NameplateSCT.db.global.truncate
-					end,
-					get = function()
-						return NameplateSCT.db.global.truncateLetter
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.truncateLetter = newValue
 					end,
 					order = 2
 				},
@@ -1385,56 +1188,41 @@ local menu = {
 					disabled = function()
 						return not NameplateSCT.db.global.enabled or NameplateSCT.db.global.truncate
 					end,
-					get = function()
-						return NameplateSCT.db.global.commaSeperate
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.commaSeperate = newValue
-					end,
 					order = 3
 				},
 				size = {
 					type = "range",
 					name = L["Size"],
-					desc = "",
 					min = 5,
 					max = 72,
 					step = 1,
 					get = function()
 						return NameplateSCT.db.global.formatting.size
 					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.formatting.size = newValue
+					set = function(_, val)
+						NameplateSCT.db.global.formatting.size = val
 					end,
 					order = 52
 				},
 				alpha = {
 					type = "range",
 					name = L["Alpha"],
-					desc = "",
 					min = 0.1,
 					max = 1,
 					step = .01,
 					get = function()
 						return NameplateSCT.db.global.formatting.alpha
 					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.formatting.alpha = newValue
+					set = function(_, val)
+						NameplateSCT.db.global.formatting.alpha = val
 					end,
 					order = 53
 				},
 				useOffTarget = {
 					type = "toggle",
 					name = L["Use Seperate Off-Target Text Appearance"],
-					desc = "",
-					get = function()
-						return NameplateSCT.db.global.useOffTarget
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.useOffTarget = newValue
-					end,
 					order = 100,
-					width = "full"
+					width = "double"
 				},
 				offTarget = {
 					type = "group",
@@ -1444,35 +1232,27 @@ local menu = {
 					end,
 					order = 101,
 					inline = true,
+					get = function(i)
+						return NameplateSCT.db.global.offTargetFormatting[i[#i]]
+					end,
+					set = function(i, val)
+						NameplateSCT.db.global.offTargetFormatting[i[#i]] = val
+					end,
 					args = {
 						size = {
 							type = "range",
 							name = L["Size"],
-							desc = "",
 							min = 5,
 							max = 72,
 							step = 1,
-							get = function()
-								return NameplateSCT.db.global.offTargetFormatting.size
-							end,
-							set = function(_, newValue)
-								NameplateSCT.db.global.offTargetFormatting.size = newValue
-							end,
 							order = 2
 						},
 						alpha = {
 							type = "range",
 							name = L["Alpha"],
-							desc = "",
 							min = 0.1,
 							max = 1,
 							step = .01,
-							get = function()
-								return NameplateSCT.db.global.offTargetFormatting.alpha
-							end,
-							set = function(_, newValue)
-								NameplateSCT.db.global.offTargetFormatting.alpha = newValue
-							end,
 							order = 3
 						}
 					}
@@ -1487,66 +1267,44 @@ local menu = {
 			disabled = function()
 				return not NameplateSCT.db.global.enabled
 			end,
+			get = function(i)
+				return NameplateSCT.db.global.sizing[i[#i]]
+			end,
+			set = function(i, val)
+				NameplateSCT.db.global.sizing[i[#i]] = val
+			end,
 			args = {
 				crits = {
 					type = "toggle",
 					name = L["Embiggen Crits"],
-					desc = "",
-					get = function()
-						return NameplateSCT.db.global.sizing.crits
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.sizing.crits = newValue
-					end,
 					order = 1
 				},
 				critsScale = {
 					type = "range",
 					name = L["Embiggen Crits Scale"],
-					desc = "",
 					disabled = function()
 						return not NameplateSCT.db.global.enabled or not NameplateSCT.db.global.sizing.crits
 					end,
 					min = 1,
 					max = 3,
 					step = .01,
-					get = function()
-						return NameplateSCT.db.global.sizing.critsScale
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.sizing.critsScale = newValue
-					end,
 					order = 2,
 					width = "double"
 				},
 				miss = {
 					type = "toggle",
 					name = L["Embiggen Miss/Parry/Dodge/etc"],
-					desc = "",
-					get = function()
-						return NameplateSCT.db.global.sizing.miss
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.sizing.miss = newValue
-					end,
 					order = 10
 				},
 				missScale = {
 					type = "range",
 					name = L["Embiggen Miss/Parry/Dodge/etc Scale"],
-					desc = "",
 					disabled = function()
 						return not NameplateSCT.db.global.enabled or not NameplateSCT.db.global.sizing.miss
 					end,
 					min = 1,
 					max = 3,
 					step = .01,
-					get = function()
-						return NameplateSCT.db.global.sizing.missScale
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.sizing.missScale = newValue
-					end,
 					order = 11,
 					width = "double"
 				},
@@ -1557,18 +1315,11 @@ local menu = {
 					disabled = function()
 						return not NameplateSCT.db.global.enabled or NameplateSCT.db.global.sizing.smallHitsHide
 					end,
-					get = function()
-						return NameplateSCT.db.global.sizing.smallHits
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.sizing.smallHits = newValue
-					end,
 					order = 20
 				},
 				smallHitsScale = {
 					type = "range",
 					name = L["Small Hits Scale"],
-					desc = "",
 					disabled = function()
 						return not NameplateSCT.db.global.enabled or not NameplateSCT.db.global.sizing.smallHits or
 							NameplateSCT.db.global.sizing.smallHitsHide
@@ -1576,12 +1327,6 @@ local menu = {
 					min = 0.33,
 					max = 1,
 					step = .01,
-					get = function()
-						return NameplateSCT.db.global.sizing.smallHitsScale
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.sizing.smallHitsScale = newValue
-					end,
 					order = 21,
 					width = "double"
 				},
@@ -1589,12 +1334,6 @@ local menu = {
 					type = "toggle",
 					name = L["Hide Small Hits"],
 					desc = L["Hide hits that are below a running average of your recent damage output"],
-					get = function()
-						return NameplateSCT.db.global.sizing.smallHitsHide
-					end,
-					set = function(_, newValue)
-						NameplateSCT.db.global.sizing.smallHitsHide = newValue
-					end,
 					order = 22
 				}
 			}

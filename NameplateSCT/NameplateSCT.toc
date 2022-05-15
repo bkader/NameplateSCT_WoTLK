@@ -1,5 +1,5 @@
 ## Interface: 30300
-## Title: NameplateSCT (|c00ffffffWoTLK|r)
+## Title: NameplateSCT (|c00ffffffWotLK|r)
 ## Notes: Nameplate-based scrolling combat text.
 ## Version: 1.8
 ## OptionalDeps: Ace3, LibEasing
