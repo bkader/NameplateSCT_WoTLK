@@ -7,7 +7,7 @@
 		LibNameplates tries to function with the default nameplates, Aloft, caelNamePlates and TidyPlates.
 	Dependencies: LibStub, CallbackHandler-1.0
 ]]
-local MAJOR, MINOR = "LibNameplates-1.0", 31
+local MAJOR, MINOR = "LibNameplates-1.0", 32
 if not LibStub then
 	error(MAJOR .. " requires LibStub.")
 	return
@@ -654,13 +654,13 @@ do
 			if self.unitID == "target" and frame:IsShown() and lib:IsTarget(frame, true) then
 				if guid == true then -- already set
 					FoundPlateGUID(frame, UnitGUID("target"), "target", "PLAYER_TARGET_CHANGED")
+					break
 				end
-				break
 			elseif self.unitID == "mouseover" and frame:IsShown() and lib:IsMouseover(frame) then
 				if guid == true then -- already set
 					FoundPlateGUID(frame, UnitGUID("mouseover"), "mouseover", "UPDATE_MOUSEOVER_UNIT")
+					break
 				end
-				break
 			end
 		end
 		self.unitID = nil
