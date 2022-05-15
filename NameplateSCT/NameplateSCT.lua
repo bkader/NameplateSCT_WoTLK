@@ -97,7 +97,7 @@ local defaults = {
 		enabled = true,
 		xOffset = 0,
 		yOffset = 0,
-		includeHeals = false,
+		heals = false,
 		personalOnly = false,
 		xOffsetPersonal = 0,
 		yOffsetPersonal = -100,
@@ -529,15 +529,20 @@ local missedSpellEvents = {
 	SPELL_BUILDING_MISSED = true
 }
 
+local healSpellEvents = {
+	SPELL_HEAL = true,
+	SPELL_PERIODIC_HEAL = true
+}
+
 function NameplateSCT:COMBAT_LOG_EVENT_UNFILTERED(_, _, clueevent, srcGUID, srcName, srcFlags, dstGUID, dstName, _, ...)
-	if NameplateSCT.db.global.personalOnly and NameplateSCT.db.global.personal and playerGUID ~= dstGUID then
+	if self.db.global.personalOnly and self.db.global.personal and playerGUID ~= dstGUID then
 		return
 	end -- Cancel out any non player targetted abilities if you have personalSCT only enabled
 
-	if playerGUID == srcGUID or (NameplateSCT.db.global.personal and playerGUID == dstGUID) then -- Player events
-		if damageSpellEvents[clueevent] then
+	if playerGUID == srcGUID or (self.db.global.personal and playerGUID == dstGUID) then -- Player events
+		if damageSpellEvents[clueevent] or (healSpellEvents[clueevent] and self.db.global.heals) then
 			local spellId, spellName, school, amount, _, _, _, _, _, critical, _, _ = ...
-			self:DamageEvent(dstGUID, spellName, amount, school, critical, spellId)
+			self:DamageEvent(dstGUID, spellName, amount, school, critical, spellId, healSpellEvents[clueevent] and self.db.global.heals)
 		elseif clueevent == "SWING_DAMAGE" then
 			local amount, _, _, _, _, _, critical, _, _ = ...
 			self:DamageEvent(dstGUID, AutoAttack, amount, 1, critical, 6603)
@@ -548,9 +553,9 @@ function NameplateSCT:COMBAT_LOG_EVENT_UNFILTERED(_, _, clueevent, srcGUID, srcN
 			self:MissEvent(dstGUID, AutoAttack, dstGUID == playerGUID and AutoAttack or ..., 6603)
 		end
 	elseif bit.band(srcFlags, COMBATLOG_FILTER_MY_PET) ~= 0 then -- Pet/Guardian events
-		if damageSpellEvents[clueevent] then
+		if damageSpellEvents[clueevent] or (healSpellEvents[clueevent] and self.db.global.heals) then
 			local spellId, spellName, _, amount, _, _, _, _, _, critical, _, _ = ...
-			self:DamageEvent(dstGUID, spellName, amount, "pet", critical, spellId)
+			self:DamageEvent(dstGUID, spellName, amount, "pet", critical, spellId, healSpellEvents[clueevent] and self.db.global.heals)
 		elseif clueevent == "SWING_DAMAGE" then
 			local amount, _, _, _, _, _, critical, _, _ = ...
 			self:DamageEvent(dstGUID, AutoAttack, amount, "pet", critical, 6603)
@@ -570,7 +575,7 @@ end
 local numDamageEvents = 0
 local lastDamageEventTime
 local runningAverageDamageEvents = 0
-function NameplateSCT:DamageEvent(guid, spellName, amount, school, crit, spellId)
+function NameplateSCT:DamageEvent(guid, spellName, amount, school, crit, spellId, heals)
 	local text, animation, pow, size, alpha
 	local autoattack = spellName == AutoAttack or spellName == AutoShot or spellName == "pet"
 
@@ -639,6 +644,8 @@ function NameplateSCT:DamageEvent(guid, spellName, amount, school, crit, spellId
 			text = "\124cff" .. DAMAGE_TYPE_COLORS[school] .. text .. "\124r"
 		elseif self.db.global.damageColorPersonal and spellName == AutoAttack and DAMAGE_TYPE_COLORS[spellName] then
 			text = "\124cff" .. DAMAGE_TYPE_COLORS[spellName] .. text .. "\124r"
+		elseif heals and not self.db.global.damageColorPersonal then
+			text = "\124cff4dff4d" .. text .. "\124r"
 		else
 			text = "\124cff" .. self.db.global.defaultColorPersonal .. text .. "\124r"
 		end
@@ -745,8 +752,8 @@ function NameplateSCT:DisplayText(guid, text, size, alpha, animation, spellId, p
 	fontString:SetText(fontString.NSCTText)
 
 	fontString.NSCTFontSize = size
-	fontString:SetFont(getFontPath(NameplateSCT.db.global.font), fontString.NSCTFontSize, NameplateSCT.db.global.fontFlag)
-	if NameplateSCT.db.global.textShadow then
+	fontString:SetFont(getFontPath(self.db.global.font), fontString.NSCTFontSize, self.db.global.fontFlag)
+	if self.db.global.textShadow then
 		fontString:SetShadowOffset(1, -1)
 	else
 		fontString:SetShadowOffset(0, 0)
@@ -765,24 +772,18 @@ function NameplateSCT:DisplayText(guid, text, size, alpha, animation, spellId, p
 		_, _, texture = GetSpellInfo(spellName)
 	end
 
-	if NameplateSCT.db.global.showIcon and texture then
+	if self.db.global.showIcon and texture then
 		icon = fontString.icon
 		icon:Show()
 		icon:SetTexture(texture)
-		icon:SetSize(size * NameplateSCT.db.global.iconScale, size * NameplateSCT.db.global.iconScale)
-		icon:SetPoint(
-			inversePositions[NameplateSCT.db.global.iconPosition],
-			fontString,
-			NameplateSCT.db.global.iconPosition,
-			NameplateSCT.db.global.xOffsetIcon,
-			NameplateSCT.db.global.yOffsetIcon
-		)
+		icon:SetSize(size * self.db.global.iconScale, size * self.db.global.iconScale)
+		icon:SetPoint(inversePositions[self.db.global.iconPosition], fontString, self.db.global.iconPosition, self.db.global.xOffsetIcon, self.db.global.yOffsetIcon)
 		icon:SetAlpha(alpha)
 		fontString.icon = icon
 	elseif fontString.icon then
 		fontString.icon:Hide()
 	end
-	self:Animate(fontString, nameplate, NameplateSCT.db.global.animations.animationspeed, animation)
+	self:Animate(fontString, nameplate, self.db.global.animations.animationspeed, animation)
 end
 
 -------------
@@ -825,8 +826,13 @@ local menu = {
 					NameplateSCT:Disable()
 				end
 			end,
-			order = 4,
-			width = "double"
+			order = 2
+		},
+		heals = {
+			type = "toggle",
+			name = L["Include Heals"],
+			desc = L["Also show numbers when you heal"],
+			order = 3
 		},
 		personal = {
 			type = "toggle",
