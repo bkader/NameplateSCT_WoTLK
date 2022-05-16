@@ -534,6 +534,11 @@ local healSpellEvents = {
 	SPELL_PERIODIC_HEAL = true
 }
 
+local COMBATLOG_OBJECT_AFFILIATION_MINE = COMBATLOG_OBJECT_AFFILIATION_MINE or 0x00000001
+local COMBATLOG_OBJECT_TYPE_PET = COMBATLOG_OBJECT_TYPE_PET or 0x00001000
+local COMBATLOG_OBJECT_TYPE_GUARDIAN = COMBATLOG_OBJECT_TYPE_GUARDIAN or 0x00002000
+local BITMASK_MYPETS = COMBATLOG_OBJECT_AFFILIATION_MINE + COMBATLOG_OBJECT_TYPE_PET + COMBATLOG_OBJECT_TYPE_GUARDIAN
+
 function NameplateSCT:COMBAT_LOG_EVENT_UNFILTERED(_, _, clueevent, srcGUID, srcName, srcFlags, dstGUID, dstName, _, ...)
 	if self.db.global.personalOnly and self.db.global.personal and playerGUID ~= dstGUID then
 		return
@@ -552,7 +557,7 @@ function NameplateSCT:COMBAT_LOG_EVENT_UNFILTERED(_, _, clueevent, srcGUID, srcN
 		elseif clueevent == "SWING_MISSED" then
 			self:MissEvent(dstGUID, AutoAttack, dstGUID == playerGUID and AutoAttack or ..., 6603)
 		end
-	elseif bit.band(srcFlags, COMBATLOG_FILTER_MY_PET) ~= 0 then -- Pet/Guardian events
+	elseif bit.band(srcFlags, BITMASK_MYPETS) ~= 0 then -- Pet/Guardian events
 		if damageSpellEvents[clueevent] or (healSpellEvents[clueevent] and self.db.global.heals) then
 			local spellId, spellName, _, amount, _, _, _, _, _, critical, _, _ = ...
 			self:DamageEvent(dstGUID, spellName, amount, "pet", critical, spellId, healSpellEvents[clueevent] and self.db.global.heals)
@@ -1350,6 +1355,12 @@ local menu = {
 			order = 110,
 			inline = true,
 			args = {
+				date = {
+					type = "description",
+					name = format("|cffffff33Date|r: %s", GetAddOnMetadata("NameplateSCT", "X-Date")),
+					width = "double",
+					order = 0
+				},
 				website = {
 					type = "description",
 					name = format("|cffffff33Website|r: %s", GetAddOnMetadata("NameplateSCT", "X-Website")),
