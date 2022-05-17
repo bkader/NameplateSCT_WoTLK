@@ -732,24 +732,19 @@ function NameplateSCT:MissEvent(guid, spellName, missType, spellId)
 	self:DisplayText(guid, text, size, alpha, animation, spellId, pow, spellName)
 end
 
-function NameplateSCT:GetNameplateByGUID(guid)
-	return LibNameplates:GetNameplateByGUID(guid)
+function NameplateSCT:GetNameplate(guid)
+	local plate = (guid == playerGUID) and "player" or nil
+	if not plate and UnitExists("target") and not UnitIsUnit("target", "player") and UnitGUID("target") == guid then
+		plate = LibNameplates:GetTargetNameplate()
+	end
+	return plate or LibNameplates:GetNameplateByGUID(guid)
 end
 
 function NameplateSCT:DisplayText(guid, text, size, alpha, animation, spellId, pow, spellName)
-	local fontString
-	local icon
-	local nameplate
+	local fontString, icon
 
-	if playerGUID == guid then
-		nameplate = "player"
-	else
-		nameplate = self:GetNameplateByGUID(guid)
-	end
-
-	if not nameplate then
-		return
-	end
+	local nameplate = self:GetNameplate(guid)
+	if not nameplate then return end
 
 	fontString = getFontString()
 

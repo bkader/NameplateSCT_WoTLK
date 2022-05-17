@@ -7,7 +7,7 @@
 		LibNameplates tries to function with the default nameplates, Aloft, caelNamePlates and TidyPlates.
 	Dependencies: LibStub, CallbackHandler-1.0
 ]]
-local MAJOR, MINOR = "LibNameplates-1.0", 32
+local MAJOR, MINOR = "LibNameplates-1.0", 33
 if not LibStub then
 	error(MAJOR .. " requires LibStub.")
 	return
@@ -584,7 +584,9 @@ end
 --------------------------------------------------------------------------------------------------------------------------------------------
 
 local function GetHealthBarColor(frame)
-	if frame.aloftData then
+	if not frame then
+		return
+	elseif frame.aloftData then
 		return frame.aloftData.originalHealthBarR, frame.aloftData.originalHealthBarG, frame.aloftData.originalHealthBarB
 	end
 
@@ -633,7 +635,7 @@ do
 				self.unitID = "target"
 				self:Show()
 			end
-		elseif event == "UPDATE_MOUSEOVER_UNIT" then
+		elseif event == "UPDATE_MOUSEOVER_UNIT" and GetMouseFocus() == WorldFrame then
 			if UnitExists("mouseover") and not UnitIsUnit("mouseover", "player") then
 				self.unitID = "mouseover"
 				self:Show()
@@ -654,13 +656,13 @@ do
 			if self.unitID == "target" and frame:IsShown() and lib:IsTarget(frame, true) then
 				if guid == true then -- already set
 					FoundPlateGUID(frame, UnitGUID("target"), "target", "PLAYER_TARGET_CHANGED")
-					break
 				end
+				break
 			elseif self.unitID == "mouseover" and frame:IsShown() and lib:IsMouseover(frame) then
 				if guid == true then -- already set
 					FoundPlateGUID(frame, UnitGUID("mouseover"), "mouseover", "UPDATE_MOUSEOVER_UNIT")
-					break
 				end
+				break
 			end
 		end
 		self.unitID = nil
@@ -700,7 +702,9 @@ do
 end
 
 function lib:GetNameRegion(frame)
-	if frame.extended and frame.extended.regions and frame.extended.regions.name then --TidyPlates
+	if not frame then
+		return
+	elseif frame.extended and frame.extended.regions and frame.extended.regions.name then --TidyPlates
 		return frame.extended.regions.name
 	elseif frame.aloftData and frame.aloftData.nameTextRegion then --Aloft
 		return frame.aloftData.nameTextRegion
@@ -713,7 +717,9 @@ function lib:GetNameRegion(frame)
 end
 
 function lib:GetLevelRegion(frame)
-	if frame.extended and frame.extended.regions and frame.extended.regions.level then --TidyPlates
+	if not frame then
+		return
+	elseif frame.extended and frame.extended.regions and frame.extended.regions.level then --TidyPlates
 		return frame.extended.regions.level
 	elseif frame.aloftData and frame.aloftData.levelTextRegion then --Aloft
 		return frame.aloftData.levelTextRegion
@@ -724,7 +730,9 @@ function lib:GetLevelRegion(frame)
 end
 
 function lib:GetBossRegion(frame)
-	if frame.extended and frame.extended.regions and frame.extended.regions.dangerskull then --tidyPlates
+	if not frame then
+		return
+	elseif frame.extended and frame.extended.regions and frame.extended.regions.dangerskull then --tidyPlates
 		return frame.extended.regions.dangerskull
 	elseif frame.aloftData and frame.aloftData.bossIconRegion then --aloft
 		return frame.aloftData.bossIconRegion
@@ -735,7 +743,9 @@ function lib:GetBossRegion(frame)
 end
 
 function lib:GetEliteRegion(frame)
-	if frame.extended and frame.extended.regions and frame.extended.regions.eliteicon then --tidyPlates
+	if not frame then
+		return
+	elseif frame.extended and frame.extended.regions and frame.extended.regions.eliteicon then --tidyPlates
 		return frame.extended.regions.eliteicon
 	elseif frame.aloftData and frame.aloftData.stateIconRegion then --aloft
 		return frame.aloftData.stateIconRegion
@@ -748,7 +758,9 @@ function lib:GetEliteRegion(frame)
 end
 
 function lib:GetThreatRegion(frame)
-	if frame.extended and frame.extended.regions and frame.extended.regions.threatGlow then
+	if not frame then
+		return
+	elseif frame.extended and frame.extended.regions and frame.extended.regions.threatGlow then
 		return frame.extended.regions.threatGlow
 	elseif frame.aloftData and frame.aloftData.nativeGlowRegion then
 		return frame.aloftData.nativeGlowRegion
@@ -761,7 +773,9 @@ function lib:GetThreatRegion(frame)
 end
 
 function lib:GetHightlightRegion(frame)
-	if frame.extended then
+	if not frame then
+		return
+	elseif frame.extended then
 		if frame.extended.regions then
 			if frame.extended.regions.highlight then
 				return frame.extended.regions.highlight
@@ -778,7 +792,9 @@ function lib:GetHightlightRegion(frame)
 end
 
 function lib:GetRaidIconRegion(frame)
-	if frame.extended and frame.extended.regions and frame.extended.regions.raidicon then
+	if not frame then
+		return
+	elseif frame.extended and frame.extended.regions and frame.extended.regions.raidicon then
 		return frame.extended.regions.raidicon
 	elseif frame.aloftData and frame.aloftData.raidIconRegion then
 		return frame.aloftData.raidIconRegion
@@ -787,6 +803,7 @@ function lib:GetRaidIconRegion(frame)
 end
 
 function lib:IsTarget(frame, quick)
+	if not frame then return end
 	quick = quick or (frame:IsShown() and UnitExists("target"))
 
 	if frame.UnitFrame then -- ElvUI
@@ -802,7 +819,9 @@ function lib:IsTarget(frame, quick)
 end
 
 function lib:GetHealthBar(frame)
-	if frame.extended and frame.extended.bars and frame.extended.bars.health then
+	if not frame then
+		return
+	elseif frame.extended and frame.extended.bars and frame.extended.bars.health then
 		-- Aloft changes the bar color. Our functions will have to use aloftData.originalHealthBarR
 		return frame.extended.bars.health
 	elseif frame.oldHealth then --KuiNameplates
@@ -814,7 +833,9 @@ function lib:GetHealthBar(frame)
 end
 
 function lib:GetCastBar(frame)
-	if frame.extended and frame.extended.bars and frame.extended.bars.castbar then
+	if not frame then
+		return
+	elseif frame.extended and frame.extended.bars and frame.extended.bars.castbar then
 		return frame.extended.bars.castbar
 	elseif frame.aloftData and frame.aloftData.castBar then
 		return frame.aloftData.castBar
@@ -823,6 +844,7 @@ function lib:GetCastBar(frame)
 end
 
 function lib:GetName(frame)
+	if not frame then return end
 	frame = self.realPlate[frame] or frame
 	local region = self.plateRegions[frame].nameText
 	if region and region.GetText then
@@ -831,6 +853,7 @@ function lib:GetName(frame)
 end
 
 function lib:IsInCombat(frame)
+	if not frame then return end
 	frame = self.realPlate[frame] or frame
 	local region = self.plateRegions[frame].nameText
 	if region and region.GetTextColor then
@@ -840,6 +863,7 @@ end
 
 do
 	function lib:GetLevel(frame)
+		if not frame then return end
 		frame = self.realPlate[frame] or frame
 		local region = self.plateRegions[frame].levelText
 		if region and region.GetText then
