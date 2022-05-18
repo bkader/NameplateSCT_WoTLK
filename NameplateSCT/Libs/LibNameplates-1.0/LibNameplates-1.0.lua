@@ -7,7 +7,7 @@
 		LibNameplates tries to function with the default nameplates, Aloft, caelNamePlates and TidyPlates.
 	Dependencies: LibStub, CallbackHandler-1.0
 ]]
-local MAJOR, MINOR = "LibNameplates-1.0", 33
+local MAJOR, MINOR = "LibNameplates-1.0", 34
 if not LibStub then
 	error(MAJOR .. " requires LibStub.")
 	return
@@ -42,6 +42,7 @@ local _
 
 local fastOnFinishThrottle = 0.25 -- check combat & threat every x seconds.
 local slowOnFinishThrottle = 1 -- Check for lingering mouseover texture and for TidyPlates frame.
+local CheckForFakePlate -- checks fake frames
 
 local regionOrder = {
 	[1] = "threatTexture",
@@ -258,6 +259,10 @@ do
 				lib.callbacks:Fire(callbackOnTarget, lib.fakePlate[frame] or frame)
 				FoundPlateGUID(frame, UnitGUID("target"), "target")
 			end
+
+			if not lib.fakePlate[frame] then
+				CheckForFakePlate(frame)
+			end
 		end
 		wipe(checkFrames)
 		self:Hide()
@@ -273,10 +278,8 @@ function lib:SetupNameplate(frame)
 	self.isOnScreen[frame] = true
 	self.nameplates[frame] = true
 
-	local f = frame.extended or frame.kui or frame.aloftData
-	if f and not self.fakePlate[frame] then
-		self.fakePlate[frame] = f
-		self.realPlate[f] = frame
+	if not self.fakePlate[frame] then
+		CheckForFakePlate(frame)
 	end
 
 	self.callbacks:Fire(callbackOnShow, self.fakePlate[frame] or frame)
@@ -370,8 +373,8 @@ do
 end
 
 do
-	local function CheckForFakePlate(frame)
-		local f = frame.extended or frame.kui or frame.aloftData
+	function CheckForFakePlate(frame)
+		local f = frame and (frame.extended or frame.kui or frame.aloftData or frame.UnitFrame) or nil
 		if f then
 			lib.realPlate[f] = frame
 			lib.fakePlate[frame] = f
@@ -507,10 +510,26 @@ do
 	end
 end
 
-function lib:NameplateFirstLoad(frame)
-	if not self.nameplates[frame] then
-		self:HookNameplate(frame)
-		self:SetupNameplate(frame)
+do
+	local checkFrames = {}
+	local f = CreateFrame("Frame")
+	f:SetScript("OnUpdate", function(self)
+		for frame in pairs(checkFrames) do
+			if not lib.fakePlate[frame] then
+				CheckForFakePlate()
+			end
+		end
+		wipe(checkFrames)
+		self:Hide()
+	end)
+
+	function lib:NameplateFirstLoad(frame)
+		if not self.nameplates[frame] then
+			self:HookNameplate(frame)
+			self:SetupNameplate(frame)
+			checkFrames[frame] = true
+			f:Show()
+		end
 	end
 end
 
@@ -806,13 +825,13 @@ function lib:IsTarget(frame, quick)
 	if not frame then return end
 	quick = quick or (frame:IsShown() and UnitExists("target"))
 
-	if frame.UnitFrame then -- ElvUI
-		if not self.fakePlate[frame] then
-			self.fakePlate[frame] = frame.UnitFrame
-			self.realPlate[frame.UnitFrame] = frame
-		end
-		return quick and (frame.UnitFrame.alpha == 1) or false
-	end
+	-- if frame.UnitFrame then -- ElvUI
+	-- 	if not self.fakePlate[frame] then
+	-- 		self.fakePlate[frame] = frame.UnitFrame
+	-- 		self.realPlate[frame.UnitFrame] = frame
+	-- 	end
+	-- 	return quick and (frame.UnitFrame.alpha == 1) or false
+	-- end
 
 	frame = self.realPlate[frame] or frame
 	return quick and (frame:GetAlpha() == 1) or false
@@ -1051,8 +1070,9 @@ end
 function lib:GetTargetNameplate()
 	if UnitExists("target") then
 		for frame in pairs(self.nameplates) do
-			if frame:IsShown() and frame:GetAlpha() == 1 then
-				return self.fakePlate[frame] or frame
+			local f = self.fakePlate[frame] or frame
+			if f:IsShown() and f:GetAlpha() == 1 then
+				return f
 			end
 		end
 	end
