@@ -1374,17 +1374,11 @@ local menu = {
 					width = "double",
 					order = 30
 				},
-				donate = {
-					type = "description",
-					name = format("|cffffff33Donation|r: %s", GetAddOnMetadata("NameplateSCT", "X-Donate")),
-					width = "double",
-					order = 40
-				},
 				credits = {
 					type = "description",
 					name = format("|cffffff33Credits|r: %s", GetAddOnMetadata("NameplateSCT", "X-Credits")),
 					width = "double",
-					order = 50
+					order = 40
 				}
 			}
 		}
