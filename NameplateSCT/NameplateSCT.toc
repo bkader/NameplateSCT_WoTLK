@@ -4,7 +4,7 @@
 ## Version: 1.8
 ## OptionalDeps: Ace3, LibEasing
 ## SavedVariables: NameplateSCTDB
-## Author: Kader (|cff808080bkader#6361|r)
+## Author: Kader (|cff808080bkader#5341|r)
 ## X-Date: 2022-05-22 @ 08:18 AM |cff808080UTC|r
 ## X-Credits: mpstark, Justwait
 ## X-Category: Combat
