@@ -95,6 +95,7 @@ local defaultFont = SharedMedia:IsValid("font", "Bazooka") and "Bazooka" or "Fri
 local defaults = {
 	global = {
 		enabled = true,
+		shouldDisplayOverkill = false,
 		xOffset = 0,
 		yOffset = 0,
 		heals = false,
@@ -546,10 +547,10 @@ function NameplateSCT:COMBAT_LOG_EVENT_UNFILTERED(_, _, clueevent, srcGUID, srcN
 
 	if playerGUID == srcGUID or (self.db.global.personal and playerGUID == dstGUID) then -- Player events
 		if damageSpellEvents[clueevent] or (healSpellEvents[clueevent] and self.db.global.heals) then
-			local spellId, spellName, school, amount, _, _, _, _, _, critical, _, _ = ...
+			local spellId, spellName, school, amount, overkill, _, _, _, _, critical, _, _ = ...
 			self:DamageEvent(dstGUID, spellName, amount, school, critical, spellId, healSpellEvents[clueevent] and self.db.global.heals)
 		elseif clueevent == "SWING_DAMAGE" then
-			local amount, _, _, _, _, _, critical, _, _ = ...
+			local amount, overkill, _, _, _, _, critical, _, _ = ...
 			self:DamageEvent(dstGUID, AutoAttack, amount, 1, critical, 6603)
 		elseif missedSpellEvents[clueevent] then
 			local spellId, spellName, school, missType = ...
@@ -559,11 +560,11 @@ function NameplateSCT:COMBAT_LOG_EVENT_UNFILTERED(_, _, clueevent, srcGUID, srcN
 		end
 	elseif band(srcFlags, BITMASK_PETS) ~= 0 and band(srcFlags, BITMASK_MINE) ~= 0 then -- Pet/Guardian events
 		if damageSpellEvents[clueevent] or (healSpellEvents[clueevent] and self.db.global.heals) then
-			local spellId, spellName, _, amount, _, _, _, _, _, critical, _, _ = ...
-			self:DamageEvent(dstGUID, spellName, amount, "pet", critical, spellId, healSpellEvents[clueevent] and self.db.global.heals)
+			local spellId, spellName, _, amount, overkill, _, _, _, _, critical, _, _ = ...
+			self:DamageEvent(dstGUID, spellName, amount, "pet", overkill, critical, spellId, healSpellEvents[clueevent] and self.db.global.heals)
 		elseif clueevent == "SWING_DAMAGE" then
-			local amount, _, _, _, _, _, critical, _, _ = ...
-			self:DamageEvent(dstGUID, AutoAttack, amount, "pet", critical, 6603)
+			local amount, overkill, _, _, _, _, critical, _, _ = ...
+			self:DamageEvent(dstGUID, AutoAttack, amount, "pet", overkill, critical, 6603)
 		end
 	end
 end
@@ -580,7 +581,7 @@ end
 local numDamageEvents = 0
 local lastDamageEventTime
 local runningAverageDamageEvents = 0
-function NameplateSCT:DamageEvent(guid, spellName, amount, school, crit, spellId, heals)
+function NameplateSCT:DamageEvent(guid, spellName, amount, overkill, school, crit, spellId, heals)
 	local text, animation, pow, size, alpha
 	local autoattack = spellName == AutoAttack or spellName == AutoShot or spellName == "pet"
 
@@ -636,25 +637,7 @@ function NameplateSCT:DamageEvent(guid, spellName, amount, school, crit, spellId
 	end
 
 	-- color text
-	if guid ~= playerGUID then
-		if self.db.global.damageColor and (spellName == AutoAttack or spellName == AutoShot) and DAMAGE_TYPE_COLORS[spellName] then
-			text = "\124cff" .. DAMAGE_TYPE_COLORS[spellName] .. text .. "\124r"
-		elseif self.db.global.damageColor and school and DAMAGE_TYPE_COLORS[school] then
-			text = "\124cff" .. DAMAGE_TYPE_COLORS[school] .. text .. "\124r"
-		else
-			text = "\124cff" .. self.db.global.defaultColor .. text .. "\124r"
-		end
-	else
-		if self.db.global.damageColorPersonal and school and DAMAGE_TYPE_COLORS[school] then
-			text = "\124cff" .. DAMAGE_TYPE_COLORS[school] .. text .. "\124r"
-		elseif self.db.global.damageColorPersonal and spellName == AutoAttack and DAMAGE_TYPE_COLORS[spellName] then
-			text = "\124cff" .. DAMAGE_TYPE_COLORS[spellName] .. text .. "\124r"
-		elseif heals and not self.db.global.damageColorPersonal then
-			text = "\124cff4dff4d" .. text .. "\124r"
-		else
-			text = "\124cff" .. self.db.global.defaultColorPersonal .. text .. "\124r"
-		end
-	end
+	text = self:ColorText(text, guid, playerGUID, school, spellName, heals)
 
 	-- shrink small hits
 	if (self.db.global.sizing.smallHits or self.db.global.sizing.smallHitsHide) and playerGUID ~= guid then
@@ -691,6 +674,12 @@ function NameplateSCT:DamageEvent(guid, spellName, amount, school, crit, spellId
 	if (size < 5) then
 		size = 5
 	end
+
+	if (overkill > 0 and self.db.global.shouldDisplayOverkill) then
+		text = self:ColorText(text.." Overkill("..overkill..")", guid, playerGUID, school, spellName, heals)
+		self:DisplayTextOverkill(guid, text, size, alpha, animation, spellId, pow, spellName)
+	end
+
 	self:DisplayText(guid, text, size, alpha, animation, spellId, pow, spellName)
 end
 
@@ -732,6 +721,32 @@ function NameplateSCT:MissEvent(guid, spellName, missType, spellId)
 	self:DisplayText(guid, text, size, alpha, animation, spellId, pow, spellName)
 end
 
+function NameplateSCT:ColorText(startingText, guid, playerGUID, school, spellName, heals)
+	local finalText
+
+	if guid ~= playerGUID then
+		if self.db.global.damageColor and (spellName == AutoAttack or spellName == AutoShot) and DAMAGE_TYPE_COLORS[spellName] then
+			finalText = "\124cff" .. DAMAGE_TYPE_COLORS[spellName] .. startingText .. "\124r"
+		elseif self.db.global.damageColor and school and DAMAGE_TYPE_COLORS[school] then
+			finalText = "\124cff" .. DAMAGE_TYPE_COLORS[school] .. startingText .. "\124r"
+		else
+			finalText = "\124cff" .. self.db.global.defaultColor .. startingText .. "\124r"
+		end
+	else
+		if self.db.global.damageColorPersonal and school and DAMAGE_TYPE_COLORS[school] then
+			finalText = "\124cff" .. DAMAGE_TYPE_COLORS[school] .. startingText .. "\124r"
+		elseif self.db.global.damageColorPersonal and spellName == AutoAttack and DAMAGE_TYPE_COLORS[spellName] then
+			finalText = "\124cff" .. DAMAGE_TYPE_COLORS[spellName] .. startingText .. "\124r"
+		elseif heals and not self.db.global.damageColorPersonal then
+			finalText = "\124cff4dff4d" .. startingText .. "\124r"
+		else
+			finalText = "\124cff" .. self.db.global.defaultColorPersonal .. startingText .. "\124r"
+		end
+	end
+
+	return finalText
+end
+
 function NameplateSCT:GetNameplate(guid)
 	local plate = (guid == playerGUID) and "player" or nil
 	if not plate and UnitExists("target") and not UnitIsUnit("target", "player") and UnitGUID("target") == guid then
@@ -766,6 +781,51 @@ function NameplateSCT:DisplayText(guid, text, size, alpha, animation, spellId, p
 	end
 
 	fontString.guid = guid
+
+	local _, _, texture = GetSpellInfo(spellId or spellName)
+	if not texture and spellName then
+		_, _, texture = GetSpellInfo(spellName)
+	end
+
+	if self.db.global.showIcon and texture then
+		icon = fontString.icon
+		icon:Show()
+		icon:SetTexture(texture)
+		icon:SetSize(size * self.db.global.iconScale, size * self.db.global.iconScale)
+		icon:SetPoint(inversePositions[self.db.global.iconPosition], fontString, self.db.global.iconPosition, self.db.global.xOffsetIcon, self.db.global.yOffsetIcon)
+		icon:SetAlpha(alpha)
+		fontString.icon = icon
+	elseif fontString.icon then
+		fontString.icon:Hide()
+	end
+	self:Animate(fontString, nameplate, self.db.global.animations.animationspeed, animation)
+end
+
+function NameplateSCT:DisplayTextOverkill(guid, text, size, alpha, animation, spellId, pow, spellName)
+	local fontString, icon
+
+	local nameplate = "player"
+
+	fontString = getFontString()
+
+	fontString.NSCTText = text
+	fontString:SetText(fontString.NSCTText)
+
+	fontString.NSCTFontSize = size
+	fontString:SetFont(getFontPath(self.db.global.font), fontString.NSCTFontSize, self.db.global.fontFlag)
+	if self.db.global.textShadow then
+		fontString:SetShadowOffset(1, -1)
+	else
+		fontString:SetShadowOffset(0, 0)
+	end
+	fontString.startHeight = fontString:GetStringHeight()
+	fontString.pow = pow
+
+	if (fontString.startHeight <= 0) then
+		fontString.startHeight = 5;
+	end
+
+	fontString.guid = guid;
 
 	local _, _, texture = GetSpellInfo(spellId or spellName)
 	if not texture and spellName then
@@ -849,6 +909,15 @@ local menu = {
 				return (not NameplateSCT.db.global.personal or not NameplateSCT.db.global.enabled)
 			end,
 			order = 7
+		},
+		displayOverkill = {
+			type = 'toggle',
+			name = L["Display Overkill"],
+			desc = L["Display your overkill for a target over your own nameplate"],
+			get = function() return NameplateSCT.db.global.shouldDisplayOverkill; end,
+			set = function(_, newValue) NameplateSCT.db.global.shouldDisplayOverkill = newValue; end,
+			order = 8,
+			width = "full",
 		},
 		animations = {
 			type = "group",
