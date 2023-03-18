@@ -95,7 +95,7 @@ local defaultFont = SharedMedia:IsValid("font", "Bazooka") and "Bazooka" or "Fri
 local defaults = {
 	global = {
 		enabled = true,
-		shouldDisplayOverkill = false,
+		displayOverkill = false,
 		xOffset = 0,
 		yOffset = 0,
 		heals = false,
@@ -548,10 +548,10 @@ function NameplateSCT:COMBAT_LOG_EVENT_UNFILTERED(_, _, clueevent, srcGUID, srcN
 	if playerGUID == srcGUID or (self.db.global.personal and playerGUID == dstGUID) then -- Player events
 		if damageSpellEvents[clueevent] or (healSpellEvents[clueevent] and self.db.global.heals) then
 			local spellId, spellName, school, amount, overkill, _, _, _, _, critical, _, _ = ...
-			self:DamageEvent(dstGUID, spellName, amount, school, critical, spellId, healSpellEvents[clueevent] and self.db.global.heals)
+			self:DamageEvent(dstGUID, spellName, amount, overkill, school, critical, spellId, healSpellEvents[clueevent] and self.db.global.heals)
 		elseif clueevent == "SWING_DAMAGE" then
 			local amount, overkill, _, _, _, _, critical, _, _ = ...
-			self:DamageEvent(dstGUID, AutoAttack, amount, 1, critical, 6603)
+			self:DamageEvent(dstGUID, AutoAttack, amount, overkill, 1, critical, 6603)
 		elseif missedSpellEvents[clueevent] then
 			local spellId, spellName, school, missType = ...
 			self:MissEvent(dstGUID, spellName, missType, spellId)
@@ -561,10 +561,10 @@ function NameplateSCT:COMBAT_LOG_EVENT_UNFILTERED(_, _, clueevent, srcGUID, srcN
 	elseif band(srcFlags, BITMASK_PETS) ~= 0 and band(srcFlags, BITMASK_MINE) ~= 0 then -- Pet/Guardian events
 		if damageSpellEvents[clueevent] or (healSpellEvents[clueevent] and self.db.global.heals) then
 			local spellId, spellName, _, amount, overkill, _, _, _, _, critical, _, _ = ...
-			self:DamageEvent(dstGUID, spellName, amount, "pet", overkill, critical, spellId, healSpellEvents[clueevent] and self.db.global.heals)
+			self:DamageEvent(dstGUID, spellName, amount, overkill, "pet", critical, spellId, healSpellEvents[clueevent] and self.db.global.heals)
 		elseif clueevent == "SWING_DAMAGE" then
 			local amount, overkill, _, _, _, _, critical, _, _ = ...
-			self:DamageEvent(dstGUID, AutoAttack, amount, "pet", overkill, critical, 6603)
+			self:DamageEvent(dstGUID, AutoAttack, amount, overkill, "pet", critical, 6603)
 		end
 	end
 end
@@ -675,12 +675,12 @@ function NameplateSCT:DamageEvent(guid, spellName, amount, overkill, school, cri
 		size = 5
 	end
 
-	if (overkill > 0 and self.db.global.shouldDisplayOverkill) then
+	if (overkill > 0 and self.db.global.displayOverkill) then
 		text = self:ColorText(text.." Overkill("..overkill..")", guid, playerGUID, school, spellName, heals)
 		self:DisplayTextOverkill(guid, text, size, alpha, animation, spellId, pow, spellName)
+	else
+		self:DisplayText(guid, text, size, alpha, animation, spellId, pow, spellName)
 	end
-
-	self:DisplayText(guid, text, size, alpha, animation, spellId, pow, spellName)
 end
 
 function NameplateSCT:MissEvent(guid, spellName, missType, spellId)
@@ -914,8 +914,6 @@ local menu = {
 			type = 'toggle',
 			name = L["Display Overkill"],
 			desc = L["Display your overkill for a target over your own nameplate"],
-			get = function() return NameplateSCT.db.global.shouldDisplayOverkill; end,
-			set = function(_, newValue) NameplateSCT.db.global.shouldDisplayOverkill = newValue; end,
 			order = 8,
 			width = "full",
 		},
