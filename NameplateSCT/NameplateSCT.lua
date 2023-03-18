@@ -637,6 +637,10 @@ function NameplateSCT:DamageEvent(guid, spellName, amount, overkill, school, cri
 	end
 
 	-- color text
+	if (overkill > 0) then
+		text = text.." Overkill("..overkill..")"
+	end
+
 	text = self:ColorText(text, guid, playerGUID, school, spellName, heals)
 
 	-- shrink small hits
@@ -676,7 +680,6 @@ function NameplateSCT:DamageEvent(guid, spellName, amount, overkill, school, cri
 	end
 
 	if (overkill > 0 and self.db.global.displayOverkill) then
-		text = self:ColorText(text.." Overkill("..overkill..")", guid, playerGUID, school, spellName, heals)
 		self:DisplayTextOverkill(guid, text, size, alpha, animation, spellId, pow, spellName)
 	else
 		self:DisplayText(guid, text, size, alpha, animation, spellId, pow, spellName)
@@ -915,7 +918,6 @@ local menu = {
 			name = L["Display Overkill"],
 			desc = L["Display your overkill for a target over your own nameplate"],
 			order = 8,
-			width = "full",
 		},
 		animations = {
 			type = "group",

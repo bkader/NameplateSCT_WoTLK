@@ -104,3 +104,5 @@ L["Scale down hits that are below a running average of your recent damage output
 L["Small Hits Scale"] = true
 L["Hide Small Hits"] = true
 L["Hide hits that are below a running average of your recent damage output"] = true
+L["Display Overkill"] = true
+L["Display your overkill for a target over your own nameplate"] = true
